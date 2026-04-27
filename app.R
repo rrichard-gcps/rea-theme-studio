@@ -34,6 +34,14 @@ suppressPackageStartupMessages({
   library(stringr)
 })
 
+# Load K-12 Dashboard registries
+source("R/theme_registry.R")
+source("R/metric_registry.R")
+source("R/demo_data_k12.R")
+source("R/template_registry.R")
+source("R/component_registry.R")
+source("R/boe_preview.R")
+
 # Default Configuration
 DEFAULT_CONFIG <- list(
   canvas = list(width = 1600, height = 900),
@@ -1697,6 +1705,60 @@ ui <- page_sidebar(
       )
     ),
 
+    # BOE Area Snapshot Preview Tab
+    nav_panel(
+      title = "BOE Snapshot",
+      value = "boe_tab",
+      div(
+        class = "p-3 bg-light border-bottom",
+        fluidRow(
+          column(
+            4,
+            selectInput(
+              "boe_theme",
+              "Theme",
+              choices = names(theme_registry),
+              selected = "gcps_default"
+            )
+          ),
+          column(
+            4,
+            selectInput(
+              "boe_template",
+              "Template",
+              choices = names(template_registry),
+              selected = "boe_area_snapshot"
+            )
+          ),
+          column(
+            4,
+            div(
+              class = "d-flex align-items-center gap-2 mt-4",
+              actionButton(
+                "boe_zoom_out",
+                "-",
+                class = "btn btn-sm btn-outline-secondary"
+              ),
+              textOutput("boe_zoom_display", inline = TRUE),
+              actionButton(
+                "boe_zoom_in",
+                "+",
+                class = "btn btn-sm btn-outline-secondary"
+              )
+            )
+          )
+        )
+      ),
+      div(
+        class = "p-4 bg-secondary",
+        style = "overflow: auto; height: calc(100vh - 200px);",
+        div(
+          class = "d-flex justify-content-center",
+          uiOutput("boe_preview_frame")
+        )
+      )
+    ),
+
     theme_studio_tab,
 
     #  Shiny Tab
@@ -1945,6 +2007,39 @@ server <- function(input, output, session) {
 
   output$zoom_display <- renderText({
     paste0(round(rv$zoom * 100), "%")
+  })
+
+  # BOE preview zoom
+  boe_rv <- reactiveValues(zoom = 0.75)
+
+  observeEvent(input$boe_zoom_in, {
+    boe_rv$zoom <- min(1.5, boe_rv$zoom + 0.1)
+  })
+  observeEvent(input$boe_zoom_out, {
+    boe_rv$zoom <- max(0.25, boe_rv$zoom - 0.1)
+  })
+
+  output$boe_zoom_display <- renderText({
+    paste0(round(boe_rv$zoom * 100), "%")
+  })
+
+  # BOE preview output
+  output$boe_preview_frame <- renderUI({
+    # Depend on inputs so it re-renders on change
+    input$boe_theme
+    input$boe_template
+    html_content <- render_boe_preview(
+      template_id = input$boe_template,
+      theme_id = input$boe_theme
+    )
+    div(
+      style = sprintf(
+        "transform: scale(%s); transform-origin: top center;",
+        boe_rv$zoom
+      ),
+      class = "preview-frame",
+      HTML(html_content)
+    )
   })
 
   # Reset to defaults

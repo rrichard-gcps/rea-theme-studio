@@ -21,15 +21,20 @@
 - **Phase 1 complete**: Created `R/theme_registry.R` (4 themes), `R/metric_registry.R` (10 metrics), `R/demo_data_k12.R` (5 deterministic datasets). All verified with `Rscript` sourcing.
 - **Phase 2 complete**: Created `R/template_registry.R` with BOE Area Snapshot template (8 sections, 6 KPI metrics, layout defaults, audience/context metadata). Verified with `Rscript` sourcing.
 - **Phase 3 complete**: Created `R/component_registry.R` with 12 component entries and 12 placeholder render functions. All verified with `Rscript` sourcing and HTML output testing.
+- **Phase 4/5 complete**: Created `R/boe_preview.R` with template-driven renderer. Added "BOE Snapshot" tab to `app.R` with theme/template selectors and zoom controls. All 8 BOE sections render deterministically. Existing app behavior preserved.
 
 ## In Progress
 
-- Preparing the project for Phase 4 (UI Wiring).
+- None.
 
 ## Not Started
 
-- Extracting constants from `app.R`.
-- Wiring template selection into the UI.
+- Promise Schools template.
+- Assessment Performance template.
+- Adding accessibility review mode.
+- Adding disclosure review mode.
+- Adding Quarto export.
+- Adding tests.
 - Building BOE Area Snapshot preview.
 - Adding accessibility review mode.
 - Adding disclosure review mode.

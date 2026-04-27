@@ -4,7 +4,7 @@
 
 Evolve Dashboard Layout Architect into a K–12 Dashboard Architect.
 
-Phases 0–3 are complete. The project now has five registry/data files in `R/` alongside the monolithic `app.R`.
+Phases 0–5 are complete. The project now has six R/ files alongside the monolithic `app.R`, with a working BOE Snapshot preview tab.
 
 ## Completed Phases
 
@@ -12,27 +12,25 @@ Phases 0–3 are complete. The project now has five registry/data files in `R/` 
 - **Phase 1**: Created `R/theme_registry.R` (4 themes), `R/metric_registry.R` (10 metrics), `R/demo_data_k12.R` (5 deterministic datasets). All verified via `Rscript` sourcing. No changes to `app.R`.
 - **Phase 2**: Created `R/template_registry.R` with BOE Area Snapshot template. 8 sections (header, filter_bar, kpi_row, map, school_table, trend, student_groups, source_footer), 6 KPI metrics, layout defaults, audience/context metadata. Verified via `Rscript` sourcing.
 - **Phase 3**: Created `R/component_registry.R` with 12 component entries and 12 placeholder render functions. All return deterministic HTML using inline styles. Verified with `Rscript` sourcing and HTML output testing.
+- **Phase 4/5**: Created `R/boe_preview.R` with template-driven renderer. Added "BOE Snapshot" tab to `app.R` with theme/template selectors and zoom. All 8 sections render deterministically. Existing app behavior preserved.
 
 ## Current Priority
 
-**Phase 4**: Wire template/theme/audience controls into the existing `app.R` sidebar. Add `source()` calls for the new R/ files. Minimal disruption to existing behavior.
+**Phase 6**: Export scaffold — generate a runnable Shiny app or Quarto document from the BOE template.
 
 ## Next Cline Prompt
 
 ```text
-Implement Phase 4 only.
+Implement Phase 6 only.
 
-Wire the new registries into app.R:
+Add export buttons to the BOE Snapshot tab:
 
-1. Add source() calls at the top of app.R for all 5 R/ files
-2. Add a template selector dropdown to the sidebar (populated from template_registry)
-3. When BOE Area Snapshot is selected, show a summary of its sections in the sidebar
-4. Preserve all existing app behavior (layout controls, preview, export)
+1. Add a "Download HTML" button that exports the full BOE preview as a standalone HTML file
+2. Add a "Copy HTML" button
+3. Optionally add a "Download R Scaffold" button for a Shiny app scaffold
 
-Do not change the preview renderer yet.
-Do not add new export logic.
-
-After editing, confirm the app still starts and the template dropdown appears.
+Do not modify existing export tabs.
+Do not add Promise Schools or Assessment templates yet.
 ```
 
 ## Working Assumptions
