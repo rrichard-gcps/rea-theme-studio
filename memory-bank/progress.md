@@ -17,18 +17,16 @@
   - deterministic demo data
 - Added or planned `.clineignore` to reduce context overload.
 - Created this memory-bank structure.
+- **Phase 0 complete**: Produced architecture inventory of `app.R`.
+- **Phase 1 complete**: Created `R/theme_registry.R` (4 themes), `R/metric_registry.R` (10 metrics), `R/demo_data_k12.R` (5 deterministic datasets). All verified with `Rscript` sourcing.
 
 ## In Progress
 
-- Preparing the project for safer Cline/OpenCode-assisted refactoring.
-- Reducing large prompts into smaller phased tasks.
+- Preparing the project for Phase 2 (Template Registry).
 
 ## Not Started
 
 - Extracting constants from `app.R`.
-- Creating `R/theme_registry.R`.
-- Creating `R/metric_registry.R`.
-- Creating `R/demo_data_k12.R`.
 - Creating `R/template_registry.R`.
 - Creating `R/component_registry.R`.
 - Wiring template selection into the UI.
