@@ -139,3 +139,46 @@ Goal: Export a runnable Shiny scaffold for the selected BOE template.
   `www/theme-studio.css`, `www/_theme_studio_markup.html`, `www/fonts/README.md`
 - `R/generate_templates.R` (new)
 - `app.R` (studio mount, templates tab + handlers, Part C rewiring)
+---
+
+## GCPS Theme Studio — Parts A/B/C (2026-06-25)
+
+### Part A — Quarto / flexdashboard code-view tabs (✅ complete)
+
+#### A1 — Generator functions (app.R)
+- `generate_quarto_dashboard(config)`: Quarto `format: dashboard`, cosmo + theme.scss, valueBox rows, ggplot chart grid, inline SCSS note
+- `generate_quarto_html(config)`: Quarto `format: html`, page-layout: full, bslib `layout_columns` + `value_box` KPIs, `card()` charts, SCSS note
+- `generate_flexdashboard(config)`: `.Rmd` YAML, `output: flexdashboard::flex_dashboard`, bslib theme via YAML, `valueBox()` KPIs, By-Column charts
+
+#### A2 — nav_panels (app.R, ~line 2337)
+Three nav_panels inserted after `shiny_tab`, before `powerbi_tab`:
+- `Quarto Dashboard` / `quarto_dash_tab`
+- `Quarto HTML` / `quarto_html_tab`
+- `flexdashboard` / `flex_tab`
+CSS `.code-output` block updated with `#quarto_dash_output`, `#quarto_html_output`, `#flex_output`
+
+#### A3 — Server wiring (app.R)
+- `output$quarto_dash_output`, `output$quarto_html_output`, `output$flex_output` — renderText
+- `output$download_quarto_dash` (.qmd), `output$download_quarto_html` (.qmd), `output$download_flex` (.Rmd) — downloadHandlers
+- `copy_quarto_dash`, `copy_quarto_html`, `copy_flex` — observeEvents → `copy_to_clipboard`
+
+### Part B — 4 new palette families (✅ complete)
+
+Added to `gcps_base`, `gcps_ramps`, `gcps_diverging` in `app.R` and `FAMILY_NAMES`/`FAMILY_LABELS` in `R/gcps_palettes.R`:
+- `gold` (#C49A22) — warm highlight, award & recognition; diverges toward teal
+- `plum` (#7B2D8B) — deep contrast, adult literacy & workforce; diverges toward green
+- `slate` (#4A6D8C) — steel-blue, operations & infrastructure; diverges toward orange
+- `emerald` (#1A7D5A) — deep green, sustainability & wellness; diverges toward maroon
+
+`length(gcps_base) == length(gcps_ramps) == 11`
+
+### Part C — Accent panel moved to Palette tab (✅ complete)
+
+- Accent `.panel` div (containing `#accentRow`) moved from `#tab-surfaces` to be the first panel inside `#tab-palette` in `www/_theme_studio_markup.html`
+- `id="accentRow"` preserved; JS still resolves by ID
+
+### git diff --stat
+ R/gcps_palettes.R             |  12 +-
+ app.R                         | 440 +++++++++++++++++++++++++++++++++++++++++-
+ www/_theme_studio_markup.html |  10 +-
+ 3 files changed, 452 insertions(+), 10 deletions(-)

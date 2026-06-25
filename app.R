@@ -126,7 +126,11 @@ gcps_base <- c(
   green = "#5E8C31",
   violet = "#6A4CC3",
   orange = "#D96A1D",
-  neutral = "#7A828C"
+  neutral = "#7A828C",
+  gold = "#C49A22",
+  plum = "#7B2D8B",
+  slate = "#4A6D8C",
+  emerald = "#1A7D5A"
 )
 
 gcps_ramps <- list(
@@ -136,7 +140,11 @@ gcps_ramps <- list(
   green = c("#DCE6D2", "#B7CBA2", "#8EAE6F", "#5E8C31", "#4D7328"),
   violet = c("#DED8F2", "#BCAEE4", "#9782D5", "#6A4CC3", "#573EA0"),
   orange = c("#F7DECD", "#EEBC99", "#E49761", "#D96A1D", "#B25718"),
-  neutral = c("#F4F5F7", "#E3E6EA", "#B6BCC4", "#7A828C", "#4B525A")
+  neutral = c("#F4F5F7", "#E3E6EA", "#B6BCC4", "#7A828C", "#4B525A"),
+  gold = c("#F5EBC8", "#E3CC7E", "#C49A22", "#9A7A10", "#7A600D"),
+  plum = c("#EDDCF1", "#C990D5", "#7B2D8B", "#5E1E6B", "#421450"),
+  slate = c("#D5DEE6", "#A0B4C4", "#4A6D8C", "#355270", "#233850"),
+  emerald = c("#C8E8DE", "#7DC4AB", "#1A7D5A", "#126347", "#0C4A35")
 )
 
 gcps_diverging <- list(
@@ -145,7 +153,11 @@ gcps_diverging <- list(
   teal = c("#006677", "#4CA3B2", "#F3F4F6", "#BA8C8C", "#540000"),
   green = c("#4D7328", "#8EAE6F", "#F3F4F6", "#BCAEE4", "#573EA0"),
   violet = c("#573EA0", "#9782D5", "#F3F4F6", "#8EAE6F", "#4D7328"),
-  orange = c("#B25718", "#E49761", "#F3F4F6", "#6D8FCA", "#274E93")
+  orange = c("#B25718", "#E49761", "#F3F4F6", "#6D8FCA", "#274E93"),
+  gold = c("#7A600D", "#E3CC7E", "#F3F4F6", "#8CC4CE", "#006677"),
+  plum = c("#421450", "#C990D5", "#F3F4F6", "#8EAE6F", "#4D7328"),
+  slate = c("#233850", "#A0B4C4", "#F3F4F6", "#E49761", "#B25718"),
+  emerald = c("#0C4A35", "#7DC4AB", "#F3F4F6", "#BA8C8C", "#540000")
 )
 
 font_families <- c(
@@ -1085,6 +1097,305 @@ generate_shiny_code <- function(config) {
   )
 
   paste(code, collapse = "\n")
+}
+
+# ── generate_quarto_dashboard ─────────────────────────────────────────────────
+generate_quarto_dashboard <- function(config) {
+  kpi_count <- config$content$kpi_count
+  grid_rows  <- config$content$grid_rows
+  grid_cols  <- config$content$grid_cols
+  accent     <- config$theme$accent
+  bg_page    <- config$theme$bg_page
+  bg_card    <- config$theme$bg_card
+  border     <- config$theme$border
+  txt        <- config$theme$text_primary
+  font_stack <- config$typography$font_family
+  font_size  <- config$typography$font_size_base
+  ramp       <- config$palette$ramp
+
+  yaml_block <- paste(c(
+    "---",
+    "title: \"GCPS Dashboard\"",
+    "format:",
+    "  dashboard:",
+    "    theme: [cosmo, theme.scss]",
+    "    nav-buttons: []",
+    "    expandable: true",
+    "execute:",
+    "  echo: false",
+    "  warning: false",
+    "---",
+    ""
+  ), collapse = "\n")
+
+  setup_chunk <- paste(c(
+    "```{r setup}",
+    "#| label: setup",
+    "#| include: false",
+    "library(bslib)",
+    "library(ggplot2)",
+    "```",
+    ""
+  ), collapse = "\n")
+
+  vbox_section <- ""
+  if (kpi_count > 0) {
+    vboxes <- vapply(seq_len(kpi_count), function(i) {
+      col <- if (i <= length(ramp)) ramp[i] else accent
+      paste0(
+        "::: {.valuebox icon=\"graph-up\" color=\"", col, "\"}\n",
+        "KPI ", i, "\n\n`—`\n:::"
+      )
+    }, character(1))
+    vbox_section <- paste(c(
+      "## Row {height=\"20%\"}",
+      "",
+      paste(vboxes, collapse = "\n\n"),
+      ""
+    ), collapse = "\n")
+  }
+
+  chart_lines <- character(0)
+  cell_idx <- 1
+  for (r in seq_len(grid_rows)) {
+    chart_lines <- c(chart_lines, "## Row", "")
+    for (cc in seq_len(grid_cols)) {
+      chart_lines <- c(
+        chart_lines,
+        paste0("### Chart ", cell_idx),
+        "",
+        "```{r}",
+        paste0("#| title: \"Chart ", cell_idx, "\""),
+        paste0("ggplot(cars, aes(speed, dist)) +"),
+        paste0("  geom_point(colour = \"", accent, "\") +"),
+        paste0("  theme_minimal(base_size = ", font_size, ")"),
+        "```",
+        ""
+      )
+      cell_idx <- cell_idx + 1
+    }
+  }
+
+  scss_note <- paste(c(
+    "<!-- theme.scss ---------------------------------------------------",
+    "/*-- scss:defaults --*/",
+    paste0("$primary:                 ", accent, ";"),
+    paste0("$body-bg:                 ", bg_page, ";"),
+    paste0("$card-bg:                 ", bg_card, ";"),
+    paste0("$border-color:            ", border, ";"),
+    paste0("$body-color:              ", txt, ";"),
+    paste0("$font-family-sans-serif:  ", font_stack, ";"),
+    "/*-- scss:rules --*/",
+    ".card { border-radius: 10px; }",
+    "--------------------------------------------------------------- -->"
+  ), collapse = "\n")
+
+  paste(c(yaml_block, setup_chunk, vbox_section, chart_lines, scss_note), collapse = "\n")
+}
+
+# ── generate_quarto_html ──────────────────────────────────────────────────────
+generate_quarto_html <- function(config) {
+  kpi_count <- config$content$kpi_count
+  grid_rows  <- config$content$grid_rows
+  grid_cols  <- config$content$grid_cols
+  accent     <- config$theme$accent
+  bg_page    <- config$theme$bg_page
+  bg_card    <- config$theme$bg_card
+  border     <- config$theme$border
+  txt        <- config$theme$text_primary
+  font_stack <- config$typography$font_family
+  font_size  <- config$typography$font_size_base
+  ramp       <- config$palette$ramp
+
+  yaml_block <- paste(c(
+    "---",
+    "title: \"GCPS Report\"",
+    "format:",
+    "  html:",
+    "    theme: [cosmo, theme.scss]",
+    "    page-layout: full",
+    "    toc: true",
+    "execute:",
+    "  echo: false",
+    "  warning: false",
+    "---",
+    ""
+  ), collapse = "\n")
+
+  setup_chunk <- paste(c(
+    "```{r setup}",
+    "#| label: setup",
+    "#| include: false",
+    "library(bslib)",
+    "library(ggplot2)",
+    "```",
+    ""
+  ), collapse = "\n")
+
+  kpi_section <- ""
+  if (kpi_count > 0) {
+    col_w <- max(1L, 12L %/% kpi_count)
+    vbox_args <- paste(
+      vapply(seq_len(kpi_count), function(i) {
+        col <- if (i <= length(ramp)) ramp[i] else accent
+        paste0(
+          "  value_box(\n",
+          "    title = \"KPI ", i, "\",\n",
+          "    value = \"—\",\n",
+          "    showcase = bsicons::bs_icon(\"graph-up\"),\n",
+          "    theme = value_box_theme(bg = \"", col, "\")\n",
+          "  )"
+        )
+      }, character(1)),
+      collapse = ",\n"
+    )
+    kpi_section <- paste(c(
+      "```{r kpi-row}",
+      "#| label: kpi-row",
+      "layout_columns(",
+      paste0("  col_widths = rep(", col_w, "L, ", kpi_count, "L),"),
+      vbox_args,
+      ")",
+      "```",
+      ""
+    ), collapse = "\n")
+  }
+
+  chart_lines <- character(0)
+  cell_idx <- 1
+  col_w_chart <- max(1L, 12L %/% grid_cols)
+  for (r in seq_len(grid_rows)) {
+    row_cards <- paste(
+      vapply(seq_len(grid_cols), function(cc) {
+        idx <- cell_idx + cc - 1L
+        paste0(
+          "  card(\n",
+          "    card_header(\"Chart ", idx, "\"),\n",
+          "    card_body(\n",
+          "      ggplot(cars, aes(speed, dist)) +\n",
+          "        geom_point(colour = \"", accent, "\") +\n",
+          "        theme_minimal(base_size = ", font_size, ")\n",
+          "    )\n",
+          "  )"
+        )
+      }, character(1)),
+      collapse = ",\n"
+    )
+    chart_lines <- c(
+      chart_lines,
+      paste0("```{r chart-row-", r, "}"),
+      paste0("#| label: chart-row-", r),
+      "layout_columns(",
+      paste0("  col_widths = rep(", col_w_chart, "L, ", grid_cols, "L),"),
+      row_cards,
+      ")",
+      "```",
+      ""
+    )
+    cell_idx <- cell_idx + grid_cols
+  }
+
+  scss_note <- paste(c(
+    "<!-- theme.scss ---------------------------------------------------",
+    "/*-- scss:defaults --*/",
+    paste0("$primary:                 ", accent, ";"),
+    paste0("$body-bg:                 ", bg_page, ";"),
+    paste0("$card-bg:                 ", bg_card, ";"),
+    paste0("$border-color:            ", border, ";"),
+    paste0("$body-color:              ", txt, ";"),
+    paste0("$font-family-sans-serif:  ", font_stack, ";"),
+    "/*-- scss:rules --*/",
+    ".card { border-radius: 10px; }",
+    "--------------------------------------------------------------- -->"
+  ), collapse = "\n")
+
+  paste(c(yaml_block, setup_chunk, kpi_section, chart_lines, scss_note), collapse = "\n")
+}
+
+# ── generate_flexdashboard ────────────────────────────────────────────────────
+generate_flexdashboard <- function(config) {
+  kpi_count <- config$content$kpi_count
+  grid_rows  <- config$content$grid_rows
+  grid_cols  <- config$content$grid_cols
+  accent     <- config$theme$accent
+  bg_page    <- config$theme$bg_page
+  txt        <- config$theme$text_primary
+  font_name  <- config$typography$font_family_name
+  font_size  <- config$typography$font_size_base
+  ramp       <- config$palette$ramp
+
+  yaml_block <- paste(c(
+    "---",
+    "title: \"GCPS Dashboard\"",
+    "output:",
+    "  flexdashboard::flex_dashboard:",
+    "    orientation: rows",
+    "    vertical_layout: fill",
+    "    theme:",
+    paste0("      bg: \"", bg_page, "\""),
+    paste0("      fg: \"", txt, "\""),
+    paste0("      primary: \"", accent, "\""),
+    paste0("      base_font: !expr bslib::font_google(\"", font_name, "\")"),
+    "---",
+    ""
+  ), collapse = "\n")
+
+  setup_chunk <- paste(c(
+    "```{r setup, include=FALSE}",
+    "library(flexdashboard)",
+    "library(ggplot2)",
+    "library(bslib)",
+    "```",
+    ""
+  ), collapse = "\n")
+
+  kpi_section <- ""
+  if (kpi_count > 0) {
+    kpi_boxes <- vapply(seq_len(kpi_count), function(i) {
+      col <- if (i <= length(ramp)) ramp[i] else accent
+      paste(c(
+        paste0("### KPI ", i),
+        "",
+        "```{r}",
+        paste0("valueBox(\"—\", caption = \"KPI ", i, "\","),
+        paste0("  icon = \"fa-chart-line\", color = \"", col, "\")"),
+        "```"
+      ), collapse = "\n")
+    }, character(1))
+    kpi_section <- paste(c(
+      "## Row {data-height=150}",
+      "",
+      paste(kpi_boxes, collapse = "\n\n"),
+      ""
+    ), collapse = "\n")
+  }
+
+  chart_lines <- character(0)
+  col_w <- max(200L, 600L %/% max(1L, grid_cols))
+  cell_idx <- 1
+  for (cc in seq_len(grid_cols)) {
+    chart_lines <- c(
+      chart_lines,
+      paste0("## Column {data-width=", col_w, "}"),
+      ""
+    )
+    for (r in seq_len(grid_rows)) {
+      chart_lines <- c(
+        chart_lines,
+        paste0("### Chart ", cell_idx),
+        "",
+        "```{r}",
+        "ggplot(cars, aes(speed, dist)) +",
+        paste0("  geom_point(colour = \"", accent, "\") +"),
+        paste0("  theme_minimal(base_size = ", font_size, ")"),
+        "```",
+        ""
+      )
+      cell_idx <- cell_idx + 1
+    }
+  }
+
+  paste(c(yaml_block, setup_chunk, kpi_section, chart_lines), collapse = "\n")
 }
 
 generate_dax <- function(config) {
@@ -2035,6 +2346,87 @@ ui <- page_sidebar(
       )
     ),
 
+    # Quarto Dashboard Tab
+    nav_panel(
+      title = "Quarto Dashboard",
+      value = "quarto_dash_tab",
+      div(
+        class = "p-3",
+        div(
+          class = "d-flex gap-2 mb-3",
+          downloadButton(
+            "download_quarto_dash",
+            "Download .qmd",
+            class = "btn-primary btn-sm"
+          ),
+          actionButton(
+            "copy_quarto_dash",
+            "Copy Code",
+            class = "btn-outline-primary btn-sm"
+          )
+        ),
+        p(
+          class = "text-muted small",
+          "Starter Quarto dashboard (format: dashboard) with bslib theming and value boxes."
+        ),
+        div(class = "code-output", verbatimTextOutput("quarto_dash_output"))
+      )
+    ),
+
+    # Quarto HTML Tab
+    nav_panel(
+      title = "Quarto HTML",
+      value = "quarto_html_tab",
+      div(
+        class = "p-3",
+        div(
+          class = "d-flex gap-2 mb-3",
+          downloadButton(
+            "download_quarto_html",
+            "Download .qmd",
+            class = "btn-primary btn-sm"
+          ),
+          actionButton(
+            "copy_quarto_html",
+            "Copy Code",
+            class = "btn-outline-primary btn-sm"
+          )
+        ),
+        p(
+          class = "text-muted small",
+          "Starter Quarto HTML page built from bslib cards and layout_columns()."
+        ),
+        div(class = "code-output", verbatimTextOutput("quarto_html_output"))
+      )
+    ),
+
+    # flexdashboard Tab
+    nav_panel(
+      title = "flexdashboard",
+      value = "flex_tab",
+      div(
+        class = "p-3",
+        div(
+          class = "d-flex gap-2 mb-3",
+          downloadButton(
+            "download_flex",
+            "Download .Rmd",
+            class = "btn-primary btn-sm"
+          ),
+          actionButton(
+            "copy_flex",
+            "Copy Code",
+            class = "btn-outline-primary btn-sm"
+          )
+        ),
+        p(
+          class = "text-muted small",
+          "Starter flexdashboard (.Rmd) themed with bslib::bs_theme()."
+        ),
+        div(class = "code-output", verbatimTextOutput("flex_output"))
+      )
+    ),
+
     # Power BI HTML Tab
     nav_panel(
       title = "Power BI HTML",
@@ -2148,6 +2540,9 @@ tags_style <- tags$style(HTML(
   }
   .code-output pre,
   .code-output #shiny_output,
+  .code-output #quarto_dash_output,
+  .code-output #quarto_html_output,
+  .code-output #flex_output,
   .code-output #powerbi_output,
   .code-output #dax_output,
   .code-output #json_output,
@@ -2422,6 +2817,18 @@ server <- function(input, output, session) {
     generate_shiny_code(build_config())
   })
 
+  output$quarto_dash_output <- renderText({
+    generate_quarto_dashboard(build_config())
+  })
+
+  output$quarto_html_output <- renderText({
+    generate_quarto_html(build_config())
+  })
+
+  output$flex_output <- renderText({
+    generate_flexdashboard(build_config())
+  })
+
   # Power BI HTML output
   output$powerbi_output <- renderText({
     config <- build_config()
@@ -2458,6 +2865,21 @@ server <- function(input, output, session) {
     content = function(file) {
       writeLines(generate_shiny_code(build_config()), file)
     }
+  )
+
+  output$download_quarto_dash <- downloadHandler(
+    filename = function() paste0("dashboard-", format(Sys.Date(), "%Y%m%d"), ".qmd"),
+    content = function(file) writeLines(generate_quarto_dashboard(build_config()), file)
+  )
+
+  output$download_quarto_html <- downloadHandler(
+    filename = function() paste0("report-", format(Sys.Date(), "%Y%m%d"), ".qmd"),
+    content = function(file) writeLines(generate_quarto_html(build_config()), file)
+  )
+
+  output$download_flex <- downloadHandler(
+    filename = function() paste0("flexdash-", format(Sys.Date(), "%Y%m%d"), ".Rmd"),
+    content = function(file) writeLines(generate_flexdashboard(build_config()), file)
   )
 
   output$download_powerbi <- downloadHandler(
@@ -2505,6 +2927,18 @@ server <- function(input, output, session) {
       "copy_to_clipboard",
       generate_shiny_code(build_config())
     )
+  })
+
+  observeEvent(input$copy_quarto_dash, {
+    session$sendCustomMessage("copy_to_clipboard", generate_quarto_dashboard(build_config()))
+  })
+
+  observeEvent(input$copy_quarto_html, {
+    session$sendCustomMessage("copy_to_clipboard", generate_quarto_html(build_config()))
+  })
+
+  observeEvent(input$copy_flex, {
+    session$sendCustomMessage("copy_to_clipboard", generate_flexdashboard(build_config()))
   })
 
   observeEvent(input$copy_powerbi, {

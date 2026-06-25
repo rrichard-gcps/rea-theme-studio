@@ -19,7 +19,11 @@ FAMILY_NAMES <- c(
   "green",
   "violet",
   "orange",
-  "neutral"
+  "neutral",
+  "gold",
+  "plum",
+  "slate",
+  "emerald"
 )
 
 FAMILY_LABELS <- c(
@@ -29,7 +33,11 @@ FAMILY_LABELS <- c(
   green = "Sequential \u00B7 growth, positive metrics",
   violet = "Sequential \u00B7 distinct categorical",
   orange = "Sequential \u00B7 attention, secondary emphasis",
-  neutral = "Sequential \u00B7 neutral, supporting tones"
+  neutral = "Sequential \u00B7 neutral, supporting tones",
+  gold = "Sequential \u00B7 warm highlight, award & recognition",
+  plum = "Sequential \u00B7 deep contrast, adult literacy & workforce",
+  slate = "Sequential \u00B7 steel-blue, operations & infrastructure",
+  emerald = "Sequential \u00B7 deep green, sustainability & wellness"
 )
 
 STOPS <- c(100, 300, 500, 700, 900)
