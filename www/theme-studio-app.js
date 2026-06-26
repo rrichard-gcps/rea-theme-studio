@@ -1,5 +1,5 @@
 // ============================================================================
-// theme-studio-app.js — UI state, rendering, wiring for GCPS Theme Studio
+// theme-studio-app.js — UI state, rendering, wiring for REA Theme Studio
 // Depends on palette-data.js + theme-studio.js (window.TS)
 // ============================================================================
 (function(){
@@ -13,20 +13,28 @@ const state = {
   tab:"palette",
   // palette
   mode:"bases", baseKey:"teal", cluster:"Brookwood", school:SCHOOL_ORDER[0],
-  type:"sequential", catSet:"curated", perfN:4, perfV:"semantic",
+  type:"tints", catSet:"curated", perfN:4, perfV:"semantic",
   counts:{sequential:5,continuous:9,categorical:7,diverging:7},
   // typography
   font:"sourcesans", baseSize:15, ratio:"1.2", weight:600,
   // surfaces
   surface:"paper", accent:"maroon",
   // export
-  exp:"r"
+  exp:"r",
+  // theme preview — layout (mirrors the Shiny Dashboard Architect config)
+  layout:{
+    canvas:{width:1600,height:900},
+    header:{height:80,padding:20,logo_width:180,logo_height:50,nav_button_count:4},
+    sidebar:{width:260,padding:16,nav_item_count:5},
+    content:{kpi_height:100,kpi_count:4,kpi_gap:20,grid_rows:2,grid_cols:2,grid_gap:16,padding:20}
+  },
+  preview:{title:"District Snapshot", subtitle:"Synthetic K-12 data · live theme preview", brand:"REA"}
 };
 
 /* ---------- palette helpers ---------- */
-const TYPES=[["sequential","Sequential"],["tints","Tints & Shades"],["diverging","Diverging"],["categorical","Categorical"],["performance","Performance"],["continuous","Continuous"],["trend","Trend"]];
+const TYPES=[["tints","Tints & Shades"],["sequential","Sequential"],["diverging","Diverging"],["categorical","Categorical"],["performance","Performance"],["continuous","Continuous"],["trend","Trend"]];
 const PURPOSE={sequential:"Single-hue ramp, light → dark. Ordered data, KPI emphasis, table heat.",tints:"11-step tint/shade scale (50–950) for fine UI theming and surface layering.",diverging:"Two-ended scale through a neutral center — above/below target, gap-to-goal, change.",categorical:"Distinct hues for unrelated groups. Three curated, source-independent sets.",performance:"Ordinal proficiency scale. Semantic = fixed good→needs-support; Source-tinted = monochrome intensity.",continuous:"Fine gradient for heatmaps and continuous fills (low → high).",trend:"Fixed semantic indicators — positive, negative, neutral."};
-const DIVERGE_PAIR_={maroon:"teal",teal:"maroon",blue:"orange",orange:"blue",green:"violet",violet:"green",neutral:"maroon"};
+const DIVERGE_PAIR_={maroon:"teal",teal:"maroon",blue:"orange",orange:"blue",green:"violet",violet:"green",neutral:"maroon",gold:"teal"};
 const COUNT={sequential:{min:3,max:9},continuous:{min:3,max:11},categorical:{min:3,max:10},diverging:{set:[5,7,9,11]}};
 
 function sourceColor(){if(state.mode==="bases")return GCPS_BASE[state.baseKey];if(state.mode==="clusters")return CLUSTERS[state.cluster];return CLUSTERS[SCHOOL_CLUSTER[state.school]];}
@@ -173,30 +181,143 @@ function renderSurfaces(){
   $("#spaceScale").innerHTML=SP.map(([n,v])=>`<div class="space-row"><span class="name">${n}</span><span class="val">${v}</span><div class="bar" style="width:${v}"></div></div>`).join('');
 }
 
-/* ---------- TAB: theme preview ---------- */
+/* ---------- TAB: theme preview ----------
+   Interactive dashboard preview: layout controls (canvas, header, sidebar, KPI,
+   grid) + custom title/subtitle text drive a live, theme-styled dashboard that is
+   the same uniform layout the Export tab emits. Layout state also feeds codeConfig(). */
+
+// equal pixel split, ported from the Shiny calc_pixels() (proportions = null)
+function pxSplit(total,gap,count){return (total-gap*(count-1))/count;}
+
+// Build the inner HTML of the dashboard at full canvas dimensions.
+function buildDashboardHtml(){
+  const L=state.layout, c=L.content, h=L.header, sb=L.sidebar, cv=L.canvas;
+  const ramp=currentPalette().map(p=>p.hex).slice(0,5);
+  while(ramp.length<5)ramp.push(accentHex());
+  const mainW=cv.width-sb.width, mainH=cv.height-h.height;
+  const contentH=mainH-c.kpi_height-c.kpi_gap-c.padding*2;
+  const pv=state.preview;
+
+  // header
+  const navBtns=Array.from({length:h.nav_button_count},(_,i)=>`<div class="dx-nav-btn${i===0?' active':''}"></div>`).join('');
+  const logoStyle=`width:${h.logo_width}px;height:${h.logo_height}px;${h.logo_width<=0?'display:none;':''}`;
+  const header=`<div class="dx-header" style="height:${h.height}px;padding:0 ${h.padding}px;">`+
+    `<div class="dx-logo" style="${logoStyle}">${esc(pv.brand||'')}</div>`+
+    `<div class="dx-title">${esc(pv.title||'')}${pv.subtitle?`<span class="dx-sub">${esc(pv.subtitle)}</span>`:''}</div>`+
+    `<div class="dx-nav">${navBtns}</div></div>`;
+
+  // sidebar
+  const navItems=Array.from({length:sb.nav_item_count},(_,i)=>`<div class="dx-nav-item${i===0?' active':''}"><span class="dx-nav-ic"></span><span>Menu Item ${i+1}</span></div>`).join('');
+  const sidebar=`<div class="dx-sidebar" style="top:${h.height}px;width:${sb.width}px;height:${mainH}px;padding:${sb.padding}px;">`+
+    `<div class="dx-sb-title">Navigation</div>${navItems}</div>`;
+
+  // KPI row
+  const totalAvail=mainW-c.padding*2;
+  const kpiW=pxSplit(totalAvail,c.kpi_gap,c.kpi_count);
+  const swatches=ramp.map(hex=>`<span class="dx-kpi-sw" style="background:${hex}"></span>`).join('');
+  let kpis="";
+  for(let i=1;i<=c.kpi_count;i++){
+    const val=1000+(i*1373)%9000;
+    const chg=(1+((i*7)%14)+((i*3)%10)/10).toFixed(1);
+    kpis+=`<div class="dx-kpi" style="flex:none;width:${Math.round(kpiW)}px;border-left:3px solid ${ramp[2]};">`+
+      `<div class="dx-kpi-lbl">KPI Metric ${i}</div><div class="dx-kpi-val">${val.toLocaleString()}</div>`+
+      `<div class="dx-kpi-chg">+${chg}%</div><div class="dx-kpi-sws">${swatches}</div></div>`;
+  }
+
+  // uniform grid (rows × cols) — absolute positioned, matching the Shiny preview
+  const rows=c.grid_rows, cols=c.grid_cols;
+  const rh=pxSplit(contentH,c.grid_gap,rows);
+  const cw=pxSplit(mainW-c.padding*2,c.grid_gap,cols);
+  let cards="",yOff=0,idx=1;
+  for(let r=0;r<rows;r++){
+    let xOff=0;
+    for(let col=0;col<cols;col++){
+      cards+=`<div class="dx-card" style="left:${Math.round(xOff)}px;top:${Math.round(yOff)}px;width:${Math.round(cw)}px;height:${Math.round(rh)}px;">`+
+        `<div class="dx-card-hd"><span class="dx-card-tt">Chart ${idx}</span></div>`+
+        `<div class="dx-card-bd">Visual Placeholder</div></div>`;
+      xOff+=cw+c.grid_gap;idx++;
+    }
+    yOff+=rh+c.grid_gap;
+  }
+  const content=`<div class="dx-main" style="top:${h.height}px;left:${sb.width}px;width:${mainW}px;height:${mainH}px;padding:${c.padding}px;">`+
+    `<div class="dx-kpis" style="gap:${c.kpi_gap}px;margin-bottom:${c.kpi_gap}px;height:${c.kpi_height}px;">${kpis}</div>`+
+    `<div class="dx-grid" style="height:${contentH}px;">${cards}</div></div>`;
+
+  return header+sidebar+content;
+}
+
+function esc(s){return String(s).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));}
+
+// numeric control: path is e.g. ["header","height"] inside state.layout
+function numCtrl(label,path,min,max,step){
+  const val=path.reduce((o,k)=>o[k],state.layout);
+  const id="lc_"+path.join("_");
+  return `<label class="lc"><span>${label}</span><input type="number" id="${id}" value="${val}" min="${min}" max="${max}" step="${step||1}" data-path="${path.join('.')}"></label>`;
+}
+function txtCtrl(label,key,ph){
+  const val=state.preview[key]||"";
+  return `<label class="lc lc-wide"><span>${label}</span><input type="text" id="pv_${key}" value="${esc(val)}" placeholder="${ph||''}" data-pv="${key}"></label>`;
+}
+
 function renderPreview(){
-  const s=surf();const acc=accentHex();const fam=fontDef().stack;
-  const ramp=T.sequential(sourceColor(),5).map(x=>x.hex);
-  const scope=$("#tpScope");
-  scope.style.cssText=`--pv-canvas:${s.canvas};--pv-surface:${s.surface};--pv-border:${s.border};--pv-text:${s.text};--pv-text2:${s.text2};--pv-text3:${s.text3};--pv-accent:${acc};--pv-rampmid:${ramp[2]};--pv-font:${fam};`;
-  const bars=[62,70,78,88,100].map((h,i)=>`<div class="b" style="height:${h}%;background:${ramp[i]}"></div>`).join('');
-  const years=["2024–25","2023–24","2022–23","2021–22","2020–21"];const vals=["41.8%","40.4%","39.1%","37.8%","36.2%"];
-  const legend=years.map((y,i)=>`<div class="tp-lg"><span class="dot" style="background:${ramp[4-i]}"></span> ${y} · ${vals[i]}</div>`).join('');
-  scope.innerHTML=`
-    <div class="tp-bar"><div class="mk"></div><div class="tt">GCPS <span>District Snapshot</span></div></div>
-    <div class="tp-body">
-      <div class="tp-orient">Live preview · ${sourceName()} ramp · ${fontDef().label} ${state.baseSize}px · synthetic K-12 data</div>
-      <div class="tp-kpis">
-        <div class="tp-kpi"><div class="k">Enrollment</div><div class="v">82,453</div><div class="d">▲ 1.2%</div></div>
-        <div class="tp-kpi"><div class="k">Schools</div><div class="v">142</div><div class="d" style="color:var(--pv-text3)">—</div></div>
-        <div class="tp-kpi"><div class="k">% P / D</div><div class="v">41.8</div><div class="d">▲ 1.4%</div></div>
-        <div class="tp-kpi"><div class="k">Grad rate</div><div class="v">82.6</div><div class="d">▲ 1.6%</div></div>
-      </div>
-      <div class="tp-row">
-        <div class="tp-card"><div class="ch">% Proficient / Distinguished — 5-year trend</div><div class="tp-bars">${bars}</div></div>
-        <div class="tp-card"><div class="ch">Legend</div><div class="tp-legend">${legend}</div><a class="tp-btn">View report →</a></div>
-      </div>
-    </div>`;
+  const ctrls=$("#previewControls");
+  ctrls.innerHTML=
+    `<div class="lc-group"><div class="lc-gt">Content</div>`+
+      txtCtrl("Brand","brand","REA")+txtCtrl("Title","title","District Snapshot")+txtCtrl("Subtitle","subtitle","")+
+    `</div>`+
+    `<div class="lc-group"><div class="lc-gt">Canvas</div>`+
+      numCtrl("Width",["canvas","width"],400,3840,10)+numCtrl("Height",["canvas","height"],300,2160,10)+
+    `</div>`+
+    `<div class="lc-group"><div class="lc-gt">Header</div>`+
+      numCtrl("Height",["header","height"],40,200)+numCtrl("Padding",["header","padding"],0,40)+
+      numCtrl("Logo W",["header","logo_width"],0,300)+numCtrl("Logo H",["header","logo_height"],20,100)+
+      numCtrl("Nav buttons",["header","nav_button_count"],0,8)+
+    `</div>`+
+    `<div class="lc-group"><div class="lc-gt">Sidebar</div>`+
+      numCtrl("Width",["sidebar","width"],100,400)+numCtrl("Padding",["sidebar","padding"],0,32)+
+      numCtrl("Nav items",["sidebar","nav_item_count"],1,15)+
+    `</div>`+
+    `<div class="lc-group"><div class="lc-gt">KPI cards</div>`+
+      numCtrl("Count",["content","kpi_count"],1,8)+numCtrl("Height",["content","kpi_height"],60,150)+numCtrl("Gap",["content","kpi_gap"],0,40)+
+    `</div>`+
+    `<div class="lc-group"><div class="lc-gt">Content grid</div>`+
+      numCtrl("Rows",["content","grid_rows"],1,10)+numCtrl("Columns",["content","grid_cols"],1,6)+numCtrl("Gap",["content","grid_gap"],0,40)+numCtrl("Padding",["content","padding"],0,40)+
+    `</div>`;
+
+  // wire numeric controls
+  ctrls.querySelectorAll('input[data-path]').forEach(inp=>{
+    inp.onchange=()=>{
+      const parts=inp.dataset.path.split('.');
+      let v=parseFloat(inp.value);if(isNaN(v))return;
+      v=clamp(v,parseFloat(inp.min),parseFloat(inp.max));inp.value=v;
+      let o=state.layout;for(let i=0;i<parts.length-1;i++)o=o[parts[i]];
+      o[parts[parts.length-1]]=v;
+      drawPreview();
+    };
+  });
+  // wire text controls
+  ctrls.querySelectorAll('input[data-pv]').forEach(inp=>{
+    inp.oninput=()=>{state.preview[inp.dataset.pv]=inp.value;drawPreview();};
+  });
+
+  drawPreview();
+}
+
+function drawPreview(){
+  const s=surf();const acc=accentHex();const f=fontDef();const sc=T.typeScale(state.baseSize,state.ratio);
+  const stage=$("#tpStage");const dash=$("#tpDash");if(!dash)return;
+  const cv=state.layout.canvas;
+  dash.style.cssText=
+    `--dx-bg:${s.canvas};--dx-card:${s.surface};--dx-border:${s.border};--dx-text:${s.text};`+
+    `--dx-text2:${s.text2};--dx-accent:${acc};--dx-radius:8px;--dx-radius-lg:12px;`+
+    `--dx-font:${f.stack};--dx-fw:${state.weight};--dx-fs:${state.baseSize}px;--dx-fh:${Math.round(sc.h3)}px;`+
+    `width:${cv.width}px;height:${cv.height}px;`;
+  dash.innerHTML=buildDashboardHtml();
+  // scale to fit the stage width
+  const avail=stage.clientWidth||stage.getBoundingClientRect().width||1000;
+  const scale=Math.min(1, avail/cv.width);
+  dash.style.transform=`scale(${scale})`;
+  stage.style.height=(cv.height*scale)+"px";
 }
 
 /* ---------- TAB: accessibility ---------- */
@@ -220,20 +341,15 @@ function renderA11y(){
 
 /* ---------- Code generators (ported from the Shiny app's generate_*()) ----------
    These reproduce the Shiny Dashboard Architect exports client-side. The studio
-   carries theme/type/palette; the dashboard layout (KPI count, grid, canvas) uses
-   the Shiny app's default config (uniform layout) baked in below. */
-const DEFAULT_LAYOUT = {
-  canvas:{width:1600,height:900},
-  header:{height:80,padding:20,logo_width:180,logo_height:50,nav_button_count:4},
-  sidebar:{width:260,padding:16,nav_item_count:5},
-  content:{kpi_height:100,kpi_count:4,kpi_gap:20,grid_rows:2,grid_cols:2,grid_gap:16,padding:20,layout_type:"uniform",kpi_proportions:null}
-};
+   carries theme/type/palette; the dashboard layout (KPI count, grid, canvas) is
+   controlled live from the Theme Preview tab via state.layout (uniform layout). */
 function codeConfig(){
   const s=surf();const acc=accentHex();const f=fontDef();const sc=T.typeScale(state.baseSize,state.ratio);
   const ramp=currentPalette().map(p=>p.hex).slice(0,5);
+  const L=state.layout;
   return {
-    canvas:DEFAULT_LAYOUT.canvas, header:DEFAULT_LAYOUT.header,
-    sidebar:DEFAULT_LAYOUT.sidebar, content:DEFAULT_LAYOUT.content,
+    canvas:L.canvas, header:L.header, sidebar:L.sidebar,
+    content:Object.assign({}, L.content, {layout_type:"uniform", kpi_proportions:null}),
     theme:{bg_page:s.canvas,bg_card:s.surface,border:s.border,text_primary:s.text,
            text_secondary:s.text2,accent:acc,radius:"8px",radius_lg:"12px"},
     typography:{font_family_name:(f.google||f.label),font_family:f.stack,font_weight:String(state.weight),
@@ -385,7 +501,7 @@ function genShiny(c){
   const srv=[];for(let i=1;i<=nCards;i++)srv.push(`  output$plot_${i} <- renderPlot({ plot(cars, main = 'Chart ${i}') })`);
   const server=["server <- function(input, output, session) {",...srv,"}"];
   let code=[
-    "# Generated by GCPS Theme Studio",
+    "# Generated by REA Theme Studio",
     "# Copy-paste into a new app.R file and run",
     "","library(shiny)","library(bslib)","library(bsicons)","",
     "# ── Theme ──",...theme,"",
@@ -414,7 +530,7 @@ function scssNote(c){
 }
 function genQuartoDash(c){
   const acc=c.theme.accent, fs=c.typography.font_size_base, ramp=c.palette.ramp;
-  const yaml=["---",'title: "GCPS Dashboard"',"format:","  dashboard:","    theme: [cosmo, theme.scss]","    nav-buttons: []","    expandable: true","execute:","  echo: false","  warning: false","---",""].join("\n");
+  const yaml=["---",'title: "REA Dashboard"',"format:","  dashboard:","    theme: [cosmo, theme.scss]","    nav-buttons: []","    expandable: true","execute:","  echo: false","  warning: false","---",""].join("\n");
   const setup=["```{r setup}","#| label: setup","#| include: false","library(bslib)","library(ggplot2)","```",""].join("\n");
   let vbox="";
   if(c.content.kpi_count>0){
@@ -427,7 +543,7 @@ function genQuartoDash(c){
 }
 function genQuartoHtml(c){
   const acc=c.theme.accent, fs=c.typography.font_size_base, ramp=c.palette.ramp;
-  const yaml=["---",'title: "GCPS Report"',"format:","  html:","    theme: [cosmo, theme.scss]","    page-layout: full","    toc: true","execute:","  echo: false","  warning: false","---",""].join("\n");
+  const yaml=["---",'title: "REA Report"',"format:","  html:","    theme: [cosmo, theme.scss]","    page-layout: full","    toc: true","execute:","  echo: false","  warning: false","---",""].join("\n");
   const setup=["```{r setup}","#| label: setup","#| include: false","library(bslib)","library(ggplot2)","```",""].join("\n");
   let kpi="";
   if(c.content.kpi_count>0){
@@ -446,7 +562,7 @@ function genQuartoHtml(c){
 function genFlex(c){
   const acc=c.theme.accent, fs=c.typography.font_size_base, ramp=c.palette.ramp;
   const fontName=c.typography.font_family_name;
-  const yaml=["---",'title: "GCPS Dashboard"',"output:","  flexdashboard::flex_dashboard:","    orientation: rows","    vertical_layout: fill","    theme:",`      bg: "${c.theme.bg_page}"`,`      fg: "${c.theme.text_primary}"`,`      primary: "${acc}"`,`      base_font: !expr bslib::font_google("${fontName}")`,"---",""].join("\n");
+  const yaml=["---",'title: "REA Dashboard"',"output:","  flexdashboard::flex_dashboard:","    orientation: rows","    vertical_layout: fill","    theme:",`      bg: "${c.theme.bg_page}"`,`      fg: "${c.theme.text_primary}"`,`      primary: "${acc}"`,`      base_font: !expr bslib::font_google("${fontName}")`,"---",""].join("\n");
   const setup=["```{r setup, include=FALSE}","library(flexdashboard)","library(ggplot2)","library(bslib)","```",""].join("\n");
   let kpi="";
   if(c.content.kpi_count>0){
@@ -460,8 +576,8 @@ function genFlex(c){
 
 // format registry: id -> {label, file, gen}
 const CODE_FORMATS={
-  dax:    {file:"gcps_layout.dax",   gen:genDax},
-  pbihtml:{file:"gcps_layout.html",  gen:genPbiLayoutHtml},
+  dax:    {file:"rea_layout.dax",   gen:genDax},
+  pbihtml:{file:"rea_layout.html",  gen:genPbiLayoutHtml},
   shiny:  {file:"app.R",             gen:genShiny},
   qdash:  {file:"dashboard.qmd",     gen:genQuartoDash},
   qhtml:  {file:"report.qmd",        gen:genQuartoHtml},
@@ -482,45 +598,45 @@ function buildExport(){
   const gradient=["sequential","continuous","tints","diverging"].includes(state.type);
   const hasSem=pal.some(p=>p.sem);
   if(state.exp==="css"){
-    $("#expFile").textContent="gcps_theme.css";
+    $("#expFile").textContent="rea_theme.css";
     return `:root{\n`+
 `  /* surfaces */\n  --canvas:${s.canvas};\n  --surface:${s.surface};\n  --sunken:${s.sunken};\n  --border:${s.border};\n  --border-strong:${s.borderStrong};\n`+
 `  /* text */\n  --text:${s.text};\n  --text-2:${s.text2};\n  --text-3:${s.text3};\n`+
 `  /* accent */\n  --accent:${acc};\n  --accent-hover:${T.accentHover(acc)};\n  --accent-tint:${T.accentTint(acc)};\n`+
 `  /* type */\n  --font-sans:${f.stack};\n  --fs-display:${sc.display}px; --fs-h1:${sc.h1}px; --fs-h2:${sc.h2}px; --fs-h3:${sc.h3}px;\n  --fs-body-lg:${sc.bodyLg}px; --fs-body:${sc.body}px; --fs-caption:${sc.caption}px; --fs-micro:${sc.micro}px;\n`+
 `  /* spacing & radius */\n  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px; --s8:64px;\n  --r-sm:6px; --r-md:10px; --r-lg:14px;\n`+
-`  /* data palette · ${sourceName()} ${state.type} */\n`+hexes.map((h,i)=>`  --gcps-${sg}-${typeof pal[i].n==='number'?pal[i].n:i+1}: ${h};`).join('\n')+`\n}`;
+`  /* data palette · ${sourceName()} ${state.type} */\n`+hexes.map((h,i)=>`  --rea-${sg}-${typeof pal[i].n==='number'?pal[i].n:i+1}: ${h};`).join('\n')+`\n}`;
   }
   if(state.exp==="json"){
-    $("#expFile").textContent="gcps_theme.json";
-    const theme={name:`GCPS ${sourceName()} — ${state.type}`,dataColors:hexes,background:s.canvas,foreground:s.text,tableAccent:acc,
+    $("#expFile").textContent="rea_theme.json";
+    const theme={name:`REA ${sourceName()} — ${state.type}`,dataColors:hexes,background:s.canvas,foreground:s.text,tableAccent:acc,
       textClasses:{label:{fontFace:f.label,color:s.text2},title:{fontFace:f.label,color:s.text},callout:{fontFace:f.label,color:s.text}}};
     return JSON.stringify(theme,null,2);
   }
   // R
-  $("#expFile").textContent="gcps_theme.R";
-  let out=`# GCPS ${sourceName()} theme — generated by GCPS Theme Studio\nlibrary(ggplot2)\n\n`;
-  out+=`gcps_tokens <- list(\n  canvas = "${s.canvas}", surface = "${s.surface}", sunken = "${s.sunken}",\n  border = "${s.border}", text = "${s.text}", text_muted = "${s.text2}", accent = "${acc}"\n)\n\n`;
+  $("#expFile").textContent="rea_theme.R";
+  let out=`# REA ${sourceName()} theme — generated by REA Theme Studio\nlibrary(ggplot2)\n\n`;
+  out+=`rea_tokens <- list(\n  canvas = "${s.canvas}", surface = "${s.surface}", sunken = "${s.sunken}",\n  border = "${s.border}", text = "${s.text}", text_muted = "${s.text2}", accent = "${acc}"\n)\n\n`;
   if(hasSem){out+=`${sg} <- c(\n`+pal.map(p=>`  "${p.sem}" = "${p.hex}"`).join(",\n")+`\n)\n`;}
   else{out+=`${sg} <- c(${hexes.map(h=>`"${h}"`).join(", ")})\n`;}
   out+=`\n`;
   if(gradient){
-    out+=`scale_fill_gcps  <- function(...) scale_fill_gradientn(colours = ${sg}, ...)\n`;
-    out+=`scale_color_gcps <- function(...) scale_color_gradientn(colours = ${sg}, ...)\n\n`;
+    out+=`scale_fill_rea  <- function(...) scale_fill_gradientn(colours = ${sg}, ...)\n`;
+    out+=`scale_color_rea <- function(...) scale_color_gradientn(colours = ${sg}, ...)\n\n`;
   }else{
-    out+=`scale_fill_gcps  <- function(...) scale_fill_manual(values = ${sg}, ...)\n`;
-    out+=`scale_color_gcps <- function(...) scale_color_manual(values = ${sg}, ...)\n\n`;
+    out+=`scale_fill_rea  <- function(...) scale_fill_manual(values = ${sg}, ...)\n`;
+    out+=`scale_color_rea <- function(...) scale_color_manual(values = ${sg}, ...)\n\n`;
   }
-  out+=`theme_gcps <- function(base_size = ${state.baseSize}, base_family = "${f.label}") {\n`+
+  out+=`theme_rea <- function(base_size = ${state.baseSize}, base_family = "${f.label}") {\n`+
 `  theme_minimal(base_size = base_size, base_family = base_family) +\n`+
 `    theme(\n`+
-`      plot.background  = element_rect(fill = gcps_tokens$canvas, colour = NA),\n`+
-`      panel.background = element_rect(fill = gcps_tokens$surface, colour = NA),\n`+
+`      plot.background  = element_rect(fill = rea_tokens$canvas, colour = NA),\n`+
+`      panel.background = element_rect(fill = rea_tokens$surface, colour = NA),\n`+
 `      panel.grid.minor = element_blank(),\n`+
-`      panel.grid.major = element_line(colour = gcps_tokens$border),\n`+
-`      text             = element_text(colour = gcps_tokens$text),\n`+
-`      plot.title       = element_text(face = "bold", colour = gcps_tokens$text),\n`+
-`      axis.text        = element_text(colour = gcps_tokens$text_muted)\n`+
+`      panel.grid.major = element_line(colour = rea_tokens$border),\n`+
+`      text             = element_text(colour = rea_tokens$text),\n`+
+`      plot.title       = element_text(face = "bold", colour = rea_tokens$text),\n`+
+`      axis.text        = element_text(colour = rea_tokens$text_muted)\n`+
 `    )\n}`;
   return out;
 }
@@ -579,6 +695,9 @@ function setTab(t){
   $$(".panel-tab").forEach(p=>p.classList.toggle('active',p.id==="tab-"+t));
   render();
 }
+
+/* rescale the live preview when the viewport changes */
+let rsz;window.addEventListener('resize',()=>{if(state.tab!=="preview")return;clearTimeout(rsz);rsz=setTimeout(drawPreview,120);});
 
 /* ---------- toast/copy ---------- */
 let tt;function copy(text,msg){const f=()=>{const el=$("#toast");el.textContent=msg;el.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),1400);};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(f,f);}else f();}

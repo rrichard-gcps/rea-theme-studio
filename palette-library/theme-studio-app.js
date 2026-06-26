@@ -20,7 +20,15 @@ const state = {
   // surfaces
   surface:"paper", accent:"maroon",
   // export
-  exp:"r"
+  exp:"r",
+  // theme preview — layout (mirrors the Shiny Dashboard Architect config)
+  layout:{
+    canvas:{width:1600,height:900},
+    header:{height:80,padding:20,logo_width:180,logo_height:50,nav_button_count:4},
+    sidebar:{width:260,padding:16,nav_item_count:5},
+    content:{kpi_height:100,kpi_count:4,kpi_gap:20,grid_rows:2,grid_cols:2,grid_gap:16,padding:20}
+  },
+  preview:{title:"District Snapshot", subtitle:"Synthetic K-12 data · live theme preview", brand:"REA"}
 };
 
 /* ---------- palette helpers ---------- */
@@ -173,30 +181,143 @@ function renderSurfaces(){
   $("#spaceScale").innerHTML=SP.map(([n,v])=>`<div class="space-row"><span class="name">${n}</span><span class="val">${v}</span><div class="bar" style="width:${v}"></div></div>`).join('');
 }
 
-/* ---------- TAB: theme preview ---------- */
+/* ---------- TAB: theme preview ----------
+   Interactive dashboard preview: layout controls (canvas, header, sidebar, KPI,
+   grid) + custom title/subtitle text drive a live, theme-styled dashboard that is
+   the same uniform layout the Export tab emits. Layout state also feeds codeConfig(). */
+
+// equal pixel split, ported from the Shiny calc_pixels() (proportions = null)
+function pxSplit(total,gap,count){return (total-gap*(count-1))/count;}
+
+// Build the inner HTML of the dashboard at full canvas dimensions.
+function buildDashboardHtml(){
+  const L=state.layout, c=L.content, h=L.header, sb=L.sidebar, cv=L.canvas;
+  const ramp=currentPalette().map(p=>p.hex).slice(0,5);
+  while(ramp.length<5)ramp.push(accentHex());
+  const mainW=cv.width-sb.width, mainH=cv.height-h.height;
+  const contentH=mainH-c.kpi_height-c.kpi_gap-c.padding*2;
+  const pv=state.preview;
+
+  // header
+  const navBtns=Array.from({length:h.nav_button_count},(_,i)=>`<div class="dx-nav-btn${i===0?' active':''}"></div>`).join('');
+  const logoStyle=`width:${h.logo_width}px;height:${h.logo_height}px;${h.logo_width<=0?'display:none;':''}`;
+  const header=`<div class="dx-header" style="height:${h.height}px;padding:0 ${h.padding}px;">`+
+    `<div class="dx-logo" style="${logoStyle}">${esc(pv.brand||'')}</div>`+
+    `<div class="dx-title">${esc(pv.title||'')}${pv.subtitle?`<span class="dx-sub">${esc(pv.subtitle)}</span>`:''}</div>`+
+    `<div class="dx-nav">${navBtns}</div></div>`;
+
+  // sidebar
+  const navItems=Array.from({length:sb.nav_item_count},(_,i)=>`<div class="dx-nav-item${i===0?' active':''}"><span class="dx-nav-ic"></span><span>Menu Item ${i+1}</span></div>`).join('');
+  const sidebar=`<div class="dx-sidebar" style="top:${h.height}px;width:${sb.width}px;height:${mainH}px;padding:${sb.padding}px;">`+
+    `<div class="dx-sb-title">Navigation</div>${navItems}</div>`;
+
+  // KPI row
+  const totalAvail=mainW-c.padding*2;
+  const kpiW=pxSplit(totalAvail,c.kpi_gap,c.kpi_count);
+  const swatches=ramp.map(hex=>`<span class="dx-kpi-sw" style="background:${hex}"></span>`).join('');
+  let kpis="";
+  for(let i=1;i<=c.kpi_count;i++){
+    const val=1000+(i*1373)%9000;
+    const chg=(1+((i*7)%14)+((i*3)%10)/10).toFixed(1);
+    kpis+=`<div class="dx-kpi" style="flex:none;width:${Math.round(kpiW)}px;border-left:3px solid ${ramp[2]};">`+
+      `<div class="dx-kpi-lbl">KPI Metric ${i}</div><div class="dx-kpi-val">${val.toLocaleString()}</div>`+
+      `<div class="dx-kpi-chg">+${chg}%</div><div class="dx-kpi-sws">${swatches}</div></div>`;
+  }
+
+  // uniform grid (rows × cols) — absolute positioned, matching the Shiny preview
+  const rows=c.grid_rows, cols=c.grid_cols;
+  const rh=pxSplit(contentH,c.grid_gap,rows);
+  const cw=pxSplit(mainW-c.padding*2,c.grid_gap,cols);
+  let cards="",yOff=0,idx=1;
+  for(let r=0;r<rows;r++){
+    let xOff=0;
+    for(let col=0;col<cols;col++){
+      cards+=`<div class="dx-card" style="left:${Math.round(xOff)}px;top:${Math.round(yOff)}px;width:${Math.round(cw)}px;height:${Math.round(rh)}px;">`+
+        `<div class="dx-card-hd"><span class="dx-card-tt">Chart ${idx}</span></div>`+
+        `<div class="dx-card-bd">Visual Placeholder</div></div>`;
+      xOff+=cw+c.grid_gap;idx++;
+    }
+    yOff+=rh+c.grid_gap;
+  }
+  const content=`<div class="dx-main" style="top:${h.height}px;left:${sb.width}px;width:${mainW}px;height:${mainH}px;padding:${c.padding}px;">`+
+    `<div class="dx-kpis" style="gap:${c.kpi_gap}px;margin-bottom:${c.kpi_gap}px;height:${c.kpi_height}px;">${kpis}</div>`+
+    `<div class="dx-grid" style="height:${contentH}px;">${cards}</div></div>`;
+
+  return header+sidebar+content;
+}
+
+function esc(s){return String(s).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));}
+
+// numeric control: path is e.g. ["header","height"] inside state.layout
+function numCtrl(label,path,min,max,step){
+  const val=path.reduce((o,k)=>o[k],state.layout);
+  const id="lc_"+path.join("_");
+  return `<label class="lc"><span>${label}</span><input type="number" id="${id}" value="${val}" min="${min}" max="${max}" step="${step||1}" data-path="${path.join('.')}"></label>`;
+}
+function txtCtrl(label,key,ph){
+  const val=state.preview[key]||"";
+  return `<label class="lc lc-wide"><span>${label}</span><input type="text" id="pv_${key}" value="${esc(val)}" placeholder="${ph||''}" data-pv="${key}"></label>`;
+}
+
 function renderPreview(){
-  const s=surf();const acc=accentHex();const fam=fontDef().stack;
-  const ramp=T.sequential(sourceColor(),5).map(x=>x.hex);
-  const scope=$("#tpScope");
-  scope.style.cssText=`--pv-canvas:${s.canvas};--pv-surface:${s.surface};--pv-border:${s.border};--pv-text:${s.text};--pv-text2:${s.text2};--pv-text3:${s.text3};--pv-accent:${acc};--pv-rampmid:${ramp[2]};--pv-font:${fam};`;
-  const bars=[62,70,78,88,100].map((h,i)=>`<div class="b" style="height:${h}%;background:${ramp[i]}"></div>`).join('');
-  const years=["2024–25","2023–24","2022–23","2021–22","2020–21"];const vals=["41.8%","40.4%","39.1%","37.8%","36.2%"];
-  const legend=years.map((y,i)=>`<div class="tp-lg"><span class="dot" style="background:${ramp[4-i]}"></span> ${y} · ${vals[i]}</div>`).join('');
-  scope.innerHTML=`
-    <div class="tp-bar"><div class="mk"></div><div class="tt">GCPS <span>District Snapshot</span></div></div>
-    <div class="tp-body">
-      <div class="tp-orient">Live preview · ${sourceName()} ramp · ${fontDef().label} ${state.baseSize}px · synthetic K-12 data</div>
-      <div class="tp-kpis">
-        <div class="tp-kpi"><div class="k">Enrollment</div><div class="v">82,453</div><div class="d">▲ 1.2%</div></div>
-        <div class="tp-kpi"><div class="k">Schools</div><div class="v">142</div><div class="d" style="color:var(--pv-text3)">—</div></div>
-        <div class="tp-kpi"><div class="k">% P / D</div><div class="v">41.8</div><div class="d">▲ 1.4%</div></div>
-        <div class="tp-kpi"><div class="k">Grad rate</div><div class="v">82.6</div><div class="d">▲ 1.6%</div></div>
-      </div>
-      <div class="tp-row">
-        <div class="tp-card"><div class="ch">% Proficient / Distinguished — 5-year trend</div><div class="tp-bars">${bars}</div></div>
-        <div class="tp-card"><div class="ch">Legend</div><div class="tp-legend">${legend}</div><a class="tp-btn">View report →</a></div>
-      </div>
-    </div>`;
+  const ctrls=$("#previewControls");
+  ctrls.innerHTML=
+    `<div class="lc-group"><div class="lc-gt">Content</div>`+
+      txtCtrl("Brand","brand","REA")+txtCtrl("Title","title","District Snapshot")+txtCtrl("Subtitle","subtitle","")+
+    `</div>`+
+    `<div class="lc-group"><div class="lc-gt">Canvas</div>`+
+      numCtrl("Width",["canvas","width"],400,3840,10)+numCtrl("Height",["canvas","height"],300,2160,10)+
+    `</div>`+
+    `<div class="lc-group"><div class="lc-gt">Header</div>`+
+      numCtrl("Height",["header","height"],40,200)+numCtrl("Padding",["header","padding"],0,40)+
+      numCtrl("Logo W",["header","logo_width"],0,300)+numCtrl("Logo H",["header","logo_height"],20,100)+
+      numCtrl("Nav buttons",["header","nav_button_count"],0,8)+
+    `</div>`+
+    `<div class="lc-group"><div class="lc-gt">Sidebar</div>`+
+      numCtrl("Width",["sidebar","width"],100,400)+numCtrl("Padding",["sidebar","padding"],0,32)+
+      numCtrl("Nav items",["sidebar","nav_item_count"],1,15)+
+    `</div>`+
+    `<div class="lc-group"><div class="lc-gt">KPI cards</div>`+
+      numCtrl("Count",["content","kpi_count"],1,8)+numCtrl("Height",["content","kpi_height"],60,150)+numCtrl("Gap",["content","kpi_gap"],0,40)+
+    `</div>`+
+    `<div class="lc-group"><div class="lc-gt">Content grid</div>`+
+      numCtrl("Rows",["content","grid_rows"],1,10)+numCtrl("Columns",["content","grid_cols"],1,6)+numCtrl("Gap",["content","grid_gap"],0,40)+numCtrl("Padding",["content","padding"],0,40)+
+    `</div>`;
+
+  // wire numeric controls
+  ctrls.querySelectorAll('input[data-path]').forEach(inp=>{
+    inp.onchange=()=>{
+      const parts=inp.dataset.path.split('.');
+      let v=parseFloat(inp.value);if(isNaN(v))return;
+      v=clamp(v,parseFloat(inp.min),parseFloat(inp.max));inp.value=v;
+      let o=state.layout;for(let i=0;i<parts.length-1;i++)o=o[parts[i]];
+      o[parts[parts.length-1]]=v;
+      drawPreview();
+    };
+  });
+  // wire text controls
+  ctrls.querySelectorAll('input[data-pv]').forEach(inp=>{
+    inp.oninput=()=>{state.preview[inp.dataset.pv]=inp.value;drawPreview();};
+  });
+
+  drawPreview();
+}
+
+function drawPreview(){
+  const s=surf();const acc=accentHex();const f=fontDef();const sc=T.typeScale(state.baseSize,state.ratio);
+  const stage=$("#tpStage");const dash=$("#tpDash");if(!dash)return;
+  const cv=state.layout.canvas;
+  dash.style.cssText=
+    `--dx-bg:${s.canvas};--dx-card:${s.surface};--dx-border:${s.border};--dx-text:${s.text};`+
+    `--dx-text2:${s.text2};--dx-accent:${acc};--dx-radius:8px;--dx-radius-lg:12px;`+
+    `--dx-font:${f.stack};--dx-fw:${state.weight};--dx-fs:${state.baseSize}px;--dx-fh:${Math.round(sc.h3)}px;`+
+    `width:${cv.width}px;height:${cv.height}px;`;
+  dash.innerHTML=buildDashboardHtml();
+  // scale to fit the stage width
+  const avail=stage.clientWidth||stage.getBoundingClientRect().width||1000;
+  const scale=Math.min(1, avail/cv.width);
+  dash.style.transform=`scale(${scale})`;
+  stage.style.height=(cv.height*scale)+"px";
 }
 
 /* ---------- TAB: accessibility ---------- */
@@ -220,20 +341,15 @@ function renderA11y(){
 
 /* ---------- Code generators (ported from the Shiny app's generate_*()) ----------
    These reproduce the Shiny Dashboard Architect exports client-side. The studio
-   carries theme/type/palette; the dashboard layout (KPI count, grid, canvas) uses
-   the default config (uniform layout) baked in below. */
-const DEFAULT_LAYOUT = {
-  canvas:{width:1600,height:900},
-  header:{height:80,padding:20,logo_width:180,logo_height:50,nav_button_count:4},
-  sidebar:{width:260,padding:16,nav_item_count:5},
-  content:{kpi_height:100,kpi_count:4,kpi_gap:20,grid_rows:2,grid_cols:2,grid_gap:16,padding:20,layout_type:"uniform",kpi_proportions:null}
-};
+   carries theme/type/palette; the dashboard layout (KPI count, grid, canvas) is
+   controlled live from the Theme Preview tab via state.layout (uniform layout). */
 function codeConfig(){
   const s=surf();const acc=accentHex();const f=fontDef();const sc=T.typeScale(state.baseSize,state.ratio);
   const ramp=currentPalette().map(p=>p.hex).slice(0,5);
+  const L=state.layout;
   return {
-    canvas:DEFAULT_LAYOUT.canvas, header:DEFAULT_LAYOUT.header,
-    sidebar:DEFAULT_LAYOUT.sidebar, content:DEFAULT_LAYOUT.content,
+    canvas:L.canvas, header:L.header, sidebar:L.sidebar,
+    content:Object.assign({}, L.content, {layout_type:"uniform", kpi_proportions:null}),
     theme:{bg_page:s.canvas,bg_card:s.surface,border:s.border,text_primary:s.text,
            text_secondary:s.text2,accent:acc,radius:"8px",radius_lg:"12px"},
     typography:{font_family_name:(f.google||f.label),font_family:f.stack,font_weight:String(state.weight),
@@ -579,6 +695,9 @@ function setTab(t){
   $$(".panel-tab").forEach(p=>p.classList.toggle('active',p.id==="tab-"+t));
   render();
 }
+
+/* rescale the live preview when the viewport changes */
+let rsz;window.addEventListener('resize',()=>{if(state.tab!=="preview")return;clearTimeout(rsz);rsz=setTimeout(drawPreview,120);});
 
 /* ---------- toast/copy ---------- */
 let tt;function copy(text,msg){const f=()=>{const el=$("#toast");el.textContent=msg;el.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),1400);};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(f,f);}else f();}
