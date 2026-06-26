@@ -102,9 +102,7 @@
   };
   // Accent options: maroon (district) + the 7 analytics bases.
   function accentOptions(){
-    return [{id:"maroon",label:"District Maroon",hex:"#660000"}].concat(
-      BASE_ORDER.map(k=>({id:k,label:k.charAt(0).toUpperCase()+k.slice(1),hex:GCPS_BASE[k]}))
-    );
+    return BASE_ORDER.map(k=>({id:k,label:k.charAt(0).toUpperCase()+k.slice(1),hex:GCPS_BASE[k]}));
   }
   function accentTint(hex){const [L,C,H]=hexToOklch(hex);return oklchToHex(lerp(L,0.97,0.86),C*0.22,H);}
   function accentHover(hex){const [L,C,H]=hexToOklch(hex);return oklchToHex(L*0.82,C,H);}
