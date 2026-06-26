@@ -123,13 +123,13 @@
   <section class="panel-tab" id="tab-export">
     <div class="row" style="margin-bottom:var(--s4)">
       <span class="lbl">Format</span>
-      <div class="seg" id="expSeg"><button data-f="r" aria-pressed="true">R / ggplot2</button><button data-f="json">Power BI JSON</button><button data-f="css">CSS variables</button></div>
+      <div class="seg" id="expSeg"><button data-f="r" aria-pressed="true">R / ggplot2</button><button data-f="json">Power BI JSON</button><button data-f="css">CSS variables</button><button data-f="dax">Power BI DAX</button><button data-f="pbihtml">Power BI Layout</button><button data-f="shiny">R Shiny</button><button data-f="qdash">Quarto Dashboard</button><button data-f="qhtml">Quarto HTML</button><button data-f="flex">flexdashboard</button></div>
     </div>
     <div class="export-card">
-      <div class="export-head"><span class="file" id="expFile">gcps_theme.R</span><button class="copy-btn" id="expCopy">Copy</button></div>
+      <div class="export-head"><span class="file" id="expFile">gcps_theme.R</span><div class="row" style="gap:var(--s2)"><button class="copy-btn" id="expDownload">Download</button><button class="copy-btn" id="expCopy">Copy</button></div></div>
       <pre class="code" id="expCode"></pre>
     </div>
-    <div class="note"><b>One theme, both tools.</b> The export carries the full theme — surfaces, typography, accent, and the current data palette — not just hex codes. Power BI JSON sets data colors, background, foreground, accent, and font; R emits a <span class="mono">theme_gcps()</span> for ggplot2 plus the palette scales; CSS gives the token set for Quarto/HTML.</div>
+    <div class="note"><b>One theme, every tool.</b> The first three formats export the theme/palette tokens. The rest are full starter files driven by the current theme: <span class="mono">Power BI DAX</span> layout measures, a <span class="mono">Power BI Layout</span> HTML scaffold, an <span class="mono">R Shiny</span> app, <span class="mono">Quarto Dashboard</span>/<span class="mono">Quarto HTML</span> documents, and a <span class="mono">flexdashboard</span> — each Copyable and Downloadable, ready to run in its tool.</div>
   </section>
 </div>
 <div id="toast"></div>

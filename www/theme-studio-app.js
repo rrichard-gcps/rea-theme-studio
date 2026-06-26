@@ -218,9 +218,265 @@ function renderA11y(){
   $("#a11yPalette").innerHTML=pal.map(p=>a11yCard(p.hex,"#FFFFFF",(p.sem||("Stop "+p.n))+" on white")).join('');
 }
 
+/* ---------- Code generators (ported from the Shiny app's generate_*()) ----------
+   These reproduce the Shiny Dashboard Architect exports client-side. The studio
+   carries theme/type/palette; the dashboard layout (KPI count, grid, canvas) uses
+   the Shiny app's default config (uniform layout) baked in below. */
+const DEFAULT_LAYOUT = {
+  canvas:{width:1600,height:900},
+  header:{height:80,padding:20,logo_width:180,logo_height:50,nav_button_count:4},
+  sidebar:{width:260,padding:16,nav_item_count:5},
+  content:{kpi_height:100,kpi_count:4,kpi_gap:20,grid_rows:2,grid_cols:2,grid_gap:16,padding:20,layout_type:"uniform",kpi_proportions:null}
+};
+function codeConfig(){
+  const s=surf();const acc=accentHex();const f=fontDef();const sc=T.typeScale(state.baseSize,state.ratio);
+  const ramp=currentPalette().map(p=>p.hex).slice(0,5);
+  return {
+    canvas:DEFAULT_LAYOUT.canvas, header:DEFAULT_LAYOUT.header,
+    sidebar:DEFAULT_LAYOUT.sidebar, content:DEFAULT_LAYOUT.content,
+    theme:{bg_page:s.canvas,bg_card:s.surface,border:s.border,text_primary:s.text,
+           text_secondary:s.text2,accent:acc,radius:"8px",radius_lg:"12px"},
+    typography:{font_family_name:(f.google||f.label),font_family:f.stack,font_weight:String(state.weight),
+                font_size_base:state.baseSize,font_size_heading:Math.round(sc.h3)},
+    palette:{base_name:sourceName(),base:acc,ramp:ramp}
+  };
+}
+// equal 12-col split (proportions are always null with the default layout)
+function props12(count){const base=Math.floor(12/count);let w=Array(count).fill(base);const rem=12-base*count;for(let i=0;i<rem;i++)w[i]++;return w;}
+// equal pixel split
+function calcPx(total,gap,count){return (total-gap*(count-1))/count;}
+function rampAt(ramp,i,accent){return i<=ramp.length?ramp[i-1]:accent;}
+
+function genDax(c){
+  return [
+    "// ============================================",
+    "// Dashboard Layout DAX Measures",
+    "// ============================================",
+    "",
+    "// Canvas Dimensions",
+    `Canvas_Width = ${c.canvas.width}`,
+    `Canvas_Height = ${c.canvas.height}`,
+    "",
+    "// Header Settings",
+    `Header_Height = ${c.header.height}`,
+    `Header_Padding = ${c.header.padding}`,
+    `Logo_Width = ${c.header.logo_width}`,
+    `Logo_Height = ${c.header.logo_height}`,
+    "",
+    "// Sidebar Settings",
+    `Sidebar_Width = ${c.sidebar.width}`,
+    `Sidebar_Padding = ${c.sidebar.padding}`,
+    "",
+    "// KPI Card Settings",
+    `KPI_Height = ${c.content.kpi_height}`,
+    `KPI_Count = ${c.content.kpi_count}`,
+    `KPI_Gap = ${c.content.kpi_gap}`,
+    "",
+    "// Grid Settings",
+    `Grid_Rows = ${c.content.grid_rows}`,
+    `Grid_Cols = ${c.content.grid_cols}`,
+    `Grid_Gap = ${c.content.grid_gap}`,
+    "",
+    "// Theme Colors",
+    `Theme_BG_Page = "${c.theme.bg_page}"`,
+    `Theme_BG_Card = "${c.theme.bg_card}"`,
+    `Theme_Border = "${c.theme.border}"`,
+    `Theme_Accent = "${c.theme.accent}"`,
+    "",
+    "// Layout HTML (copy from the Power BI Layout export)",
+    'Layout HTML = "<style>...</style><div class=\'dashboard-container\'>...</div>"'
+  ].join("\n");
+}
+
+function genCss(c){
+  const mainH=c.canvas.height-c.header.height, mainW=c.canvas.width-c.sidebar.width;
+  const contentH=mainH-c.content.kpi_height-c.content.kpi_gap-c.content.padding*2;
+  const t=c.theme, ty=c.typography, p=c.palette.ramp;
+  return `:root{--bg-page:${t.bg_page};--bg-card:${t.bg_card};--border:${t.border};--text-primary:${t.text_primary};--text-secondary:${t.text_secondary};--accent:${t.accent};--radius:${t.radius};--radius-lg:${t.radius_lg};--font-family:${ty.font_family};--font-weight:${ty.font_weight};--font-size-base:${Math.trunc(ty.font_size_base)}px;--font-size-heading:${Math.trunc(ty.font_size_heading)}px;--palette-base:${c.palette.base};--palette-1:${p[0]};--palette-2:${p[1]};--palette-3:${p[2]};--palette-4:${p[3]};--palette-5:${p[4]}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-family);font-weight:var(--font-weight);font-size:var(--font-size-base);background:var(--bg-page);color:var(--text-primary)}
+.dashboard-container{position:relative;width:${c.canvas.width}px;height:${c.canvas.height}px;background:var(--bg-page);overflow:hidden}
+.header{position:absolute;top:0;left:0;width:${c.canvas.width}px;height:${c.header.height}px;background:var(--bg-card);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 ${c.header.padding}px;z-index:100}
+.header-logo{width:${c.header.logo_width}px;height:${c.header.logo_height}px;background:linear-gradient(135deg,var(--accent),#00796B);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:14px}
+.header-nav{display:flex;gap:12px}
+.header-nav-btn{width:36px;height:36px;background:var(--bg-page);border:1px solid var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:12px}
+.header-nav-btn.active{background:var(--accent);border-color:var(--accent);color:white}
+.sidebar{position:absolute;top:${c.header.height}px;left:0;width:${c.sidebar.width}px;height:${mainH}px;background:var(--bg-card);border-right:1px solid var(--border);padding:${c.sidebar.padding}px;overflow-y:auto}
+.sidebar-section{margin-bottom:20px}
+.sidebar-section-title{font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px}
+.sidebar-nav-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--radius);color:var(--text-primary);font-size:14px;cursor:pointer;margin-bottom:4px}
+.sidebar-nav-item:hover{background:var(--bg-page)}
+.sidebar-nav-item.active{background:rgba(0,151,167,0.1);color:var(--accent);font-weight:500}
+.sidebar-nav-icon{width:20px;height:20px;background:var(--bg-page);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-secondary)}
+.sidebar-nav-item.active .sidebar-nav-icon{background:var(--accent);color:white}
+.main-content{position:absolute;top:${c.header.height}px;left:${c.sidebar.width}px;width:${mainW}px;height:${mainH}px;padding:${c.content.padding}px;overflow:hidden}
+.kpi-container{display:flex;gap:${c.content.kpi_gap}px;margin-bottom:${c.content.kpi_gap}px;height:${c.content.kpi_height}px}
+.kpi-card{flex:1;background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--palette-3);border-radius:var(--radius-lg);padding:16px;display:flex;flex-direction:column;justify-content:center;position:relative}
+.kpi-swatches{position:absolute;bottom:8px;right:10px;display:flex;gap:3px;opacity:0.7}
+.kpi-swatch{width:8px;height:8px;border-radius:2px}
+.kpi-label{font-size:12px;color:var(--text-secondary);margin-bottom:4px}
+.kpi-value{font-size:calc(var(--font-size-heading) * 1.5);font-weight:700;color:var(--text-primary)}
+.kpi-change{font-size:12px;margin-top:4px}
+.kpi-change.positive{color:#10B981}
+.kpi-change.negative{color:#EF4444}
+.content-grid{position:relative;height:${contentH}px}
+.grid-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;display:flex;flex-direction:column;position:absolute}
+.grid-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.grid-card-title{font-size:var(--font-size-heading);font-weight:600;color:var(--text-primary)}
+.grid-card-content{flex:1;background:var(--bg-page);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:12px}
+.kpi-card,.grid-card,.header-logo,.sidebar-nav-item,.header-nav-btn{position:relative}`;
+}
+function genPbiLayoutHtml(c){
+  const mainW=c.canvas.width-c.sidebar.width;
+  const totalAvail=mainW-c.content.padding*2;
+  const kpiW=calcPx(totalAvail,c.content.kpi_gap,c.content.kpi_count);
+  let kpis="";
+  for(let i=1;i<=c.content.kpi_count;i++){kpis+=`<div class="kpi-card" style="flex:none;width:${Math.round(kpiW)}px;"></div>`;}
+  // uniform grid: grid_rows × grid_cols
+  const contentH=(c.canvas.height-c.header.height)-c.content.kpi_height-c.content.kpi_gap-c.content.padding*2;
+  const rows=c.content.grid_rows, cols=c.content.grid_cols;
+  const rh=calcPx(contentH,c.content.grid_gap,rows);
+  const cw=calcPx(mainW-c.content.padding*2,c.content.grid_gap,cols);
+  let cards="",yOff=0;
+  for(let r=0;r<rows;r++){let xOff=0;for(let col=0;col<cols;col++){cards+=`<div class="grid-card" style="position:absolute;left:${Math.round(xOff)}px;top:${Math.round(yOff)}px;width:${Math.round(cw)}px;height:${Math.round(rh)}px;"><div class="grid-card-content"></div></div>`;xOff+=cw+c.content.grid_gap;}yOff+=rh+c.content.grid_gap;}
+  const navBtns=Array(c.header.nav_button_count).fill('<div class="header-nav-btn"></div>').join("");
+  const navItems=Array(c.sidebar.nav_item_count).fill('<div class="sidebar-nav-item"><div class="sidebar-nav-icon"></div><span></span></div>').join("");
+  const header=`<div class="header"><div class="header-logo"></div><div class="header-nav">${navBtns}</div></div>`;
+  const sidebar=`<div class="sidebar"><div class="sidebar-section"><div class="sidebar-section-title">Navigation</div>${navItems}</div></div>`;
+  const content=`<div class="main-content"><div class="kpi-container">${kpis}</div><div class="content-grid">${cards}</div></div>`;
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Dashboard Layout</title><style>${genCss(c)}</style></head><body><div class="dashboard-container">${header}${sidebar}${content}</div></body></html>`;
+}
+
+function genShiny(c){
+  const radius=c.theme.radius.replace(/px$/,"");
+  const theme=[
+    "theme <- bs_theme(",
+    `  bg      = '${c.theme.bg_page}',`,
+    `  fg      = '${c.theme.text_primary}',`,
+    `  primary = '${c.theme.accent}'`,
+    ") |> bs_add_variables(",
+    `  'card-bg'      = '${c.theme.bg_card}',`,
+    `  'border-color' = '${c.theme.border}',`,
+    `  'border-radius' = '${radius}px'`,
+    ")"
+  ];
+  const lw=c.header.logo_width;
+  const title=[
+    "  title = div(",
+    "    img(src = 'logo.png', height = '40px', alt = 'Logo',",
+    `        style = 'margin-right:12px; display:${lw>0?"inline-block":"none"};'),`,
+    "    'My Dashboard'",
+    "  ),"
+  ];
+  const nav=[];for(let i=1;i<=c.sidebar.nav_item_count;i++)nav.push(`    nav_item(actionLink('nav_${i}', 'Menu Item ${i}')),`);
+  const sidebar=["  sidebar = sidebar(",`    width = ${c.sidebar.width},`,"    h4('Navigation'),",...nav,"  ),"];
+  // KPI row
+  let kpiLines=[];
+  if(c.content.kpi_count>0){
+    const cwk=props12(c.content.kpi_count);
+    const vbox=[];for(let i=1;i<=c.content.kpi_count;i++)vbox.push(`    value_box(title = 'KPI ${i}', value = '...', showcase = bsicons::bs_icon('graph-up'))`);
+    kpiLines=["  # KPI Row","  layout_columns(","    fill = FALSE,",`    col_widths = c(${cwk.join(", ")}),`,vbox.join(",\n"),"  ),"];
+  }
+  // uniform grid
+  const cols=c.content.grid_cols, rows=c.content.grid_rows, nCards=rows*cols;
+  const cwg=props12(cols);
+  const cards=[];for(let i=1;i<=nCards;i++)cards.push(`    card(card_header('Chart ${i}'), card_body(plotOutput('plot_${i}')))`);
+  const grid=["  # Main Grid (Uniform)","  layout_columns(",`    col_widths = c(${cwg.join(", ")}),`,"    fill = TRUE,",cards.join(",\n"),"  )"];
+  const srv=[];for(let i=1;i<=nCards;i++)srv.push(`  output$plot_${i} <- renderPlot({ plot(cars, main = 'Chart ${i}') })`);
+  const server=["server <- function(input, output, session) {",...srv,"}"];
+  let code=[
+    "# Generated by GCPS Theme Studio",
+    "# Copy-paste into a new app.R file and run",
+    "","library(shiny)","library(bslib)","library(bsicons)","",
+    "# ── Theme ──",...theme,"",
+    "# ── UI ──","ui <- page_sidebar(",...title,"  theme = theme,",...sidebar,""
+  ];
+  if(kpiLines.length)code=code.concat(kpiLines,[""]);
+  code=code.concat(grid,[")"]);
+  code=code.concat(["","# ── Server ──",...server,"","shinyApp(ui, server)"]);
+  return code.join("\n");
+}
+
+function scssNote(c){
+  return [
+    "<!-- theme.scss ---------------------------------------------------",
+    "/*-- scss:defaults --*/",
+    `$primary:                 ${c.theme.accent};`,
+    `$body-bg:                 ${c.theme.bg_page};`,
+    `$card-bg:                 ${c.theme.bg_card};`,
+    `$border-color:            ${c.theme.border};`,
+    `$body-color:              ${c.theme.text_primary};`,
+    `$font-family-sans-serif:  ${c.typography.font_family};`,
+    "/*-- scss:rules --*/",
+    ".card { border-radius: 10px; }",
+    "--------------------------------------------------------------- -->"
+  ].join("\n");
+}
+function genQuartoDash(c){
+  const acc=c.theme.accent, fs=c.typography.font_size_base, ramp=c.palette.ramp;
+  const yaml=["---",'title: "GCPS Dashboard"',"format:","  dashboard:","    theme: [cosmo, theme.scss]","    nav-buttons: []","    expandable: true","execute:","  echo: false","  warning: false","---",""].join("\n");
+  const setup=["```{r setup}","#| label: setup","#| include: false","library(bslib)","library(ggplot2)","```",""].join("\n");
+  let vbox="";
+  if(c.content.kpi_count>0){
+    const boxes=[];for(let i=1;i<=c.content.kpi_count;i++){const col=rampAt(ramp,i,acc);boxes.push(`::: {.valuebox icon="graph-up" color="${col}"}\nKPI ${i}\n\n\`—\`\n:::`);}
+    vbox=['## Row {height="20%"}',"",boxes.join("\n\n"),""].join("\n");
+  }
+  let chart=[],idx=1;
+  for(let r=0;r<c.content.grid_rows;r++){chart.push("## Row","");for(let cc=0;cc<c.content.grid_cols;cc++){chart.push(`### Chart ${idx}`,"","```{r}",`#| title: "Chart ${idx}"`,"ggplot(cars, aes(speed, dist)) +",`  geom_point(colour = "${acc}") +`,`  theme_minimal(base_size = ${fs})`,"```","");idx++;}}
+  return [yaml,setup,vbox,chart.join("\n"),scssNote(c)].join("\n");
+}
+function genQuartoHtml(c){
+  const acc=c.theme.accent, fs=c.typography.font_size_base, ramp=c.palette.ramp;
+  const yaml=["---",'title: "GCPS Report"',"format:","  html:","    theme: [cosmo, theme.scss]","    page-layout: full","    toc: true","execute:","  echo: false","  warning: false","---",""].join("\n");
+  const setup=["```{r setup}","#| label: setup","#| include: false","library(bslib)","library(ggplot2)","```",""].join("\n");
+  let kpi="";
+  if(c.content.kpi_count>0){
+    const colW=Math.max(1,Math.floor(12/c.content.kpi_count));
+    const vb=[];for(let i=1;i<=c.content.kpi_count;i++){const col=rampAt(ramp,i,acc);vb.push(`  value_box(\n    title = "KPI ${i}",\n    value = "—",\n    showcase = bsicons::bs_icon("graph-up"),\n    theme = value_box_theme(bg = "${col}")\n  )`);}
+    kpi=["```{r kpi-row}","#| label: kpi-row","layout_columns(",`  col_widths = rep(${colW}L, ${c.content.kpi_count}L),`,vb.join(",\n"),")","```",""].join("\n");
+  }
+  let chart=[],idx=1;const colWc=Math.max(1,Math.floor(12/c.content.grid_cols));
+  for(let r=1;r<=c.content.grid_rows;r++){
+    const cards=[];for(let cc=0;cc<c.content.grid_cols;cc++){const ci=idx+cc;cards.push(`  card(\n    card_header("Chart ${ci}"),\n    card_body(\n      ggplot(cars, aes(speed, dist)) +\n        geom_point(colour = "${acc}") +\n        theme_minimal(base_size = ${fs})\n    )\n  )`);}
+    chart.push(`\`\`\`{r chart-row-${r}}`,`#| label: chart-row-${r}`,"layout_columns(",`  col_widths = rep(${colWc}L, ${c.content.grid_cols}L),`,cards.join(",\n"),")","```","");
+    idx+=c.content.grid_cols;
+  }
+  return [yaml,setup,kpi,chart.join("\n"),scssNote(c)].join("\n");
+}
+function genFlex(c){
+  const acc=c.theme.accent, fs=c.typography.font_size_base, ramp=c.palette.ramp;
+  const fontName=c.typography.font_family_name;
+  const yaml=["---",'title: "GCPS Dashboard"',"output:","  flexdashboard::flex_dashboard:","    orientation: rows","    vertical_layout: fill","    theme:",`      bg: "${c.theme.bg_page}"`,`      fg: "${c.theme.text_primary}"`,`      primary: "${acc}"`,`      base_font: !expr bslib::font_google("${fontName}")`,"---",""].join("\n");
+  const setup=["```{r setup, include=FALSE}","library(flexdashboard)","library(ggplot2)","library(bslib)","```",""].join("\n");
+  let kpi="";
+  if(c.content.kpi_count>0){
+    const boxes=[];for(let i=1;i<=c.content.kpi_count;i++){const col=rampAt(ramp,i,acc);boxes.push([`### KPI ${i}`,"","```{r}",`valueBox("—", caption = "KPI ${i}",`,`  icon = "fa-chart-line", color = "${col}")`,"```"].join("\n"));}
+    kpi=["## Row {data-height=150}","",boxes.join("\n\n"),""].join("\n");
+  }
+  let chart=[],idx=1;const colW=Math.max(200,Math.floor(600/Math.max(1,c.content.grid_cols)));
+  for(let cc=0;cc<c.content.grid_cols;cc++){chart.push(`## Column {data-width=${colW}}`,"");for(let r=0;r<c.content.grid_rows;r++){chart.push(`### Chart ${idx}`,"","```{r}","ggplot(cars, aes(speed, dist)) +",`  geom_point(colour = "${acc}") +`,`  theme_minimal(base_size = ${fs})`,"```","");idx++;}}
+  return [yaml,setup,kpi,chart.join("\n")].join("\n");
+}
+
+// format registry: id -> {label, file, gen}
+const CODE_FORMATS={
+  dax:    {file:"gcps_layout.dax",   gen:genDax},
+  pbihtml:{file:"gcps_layout.html",  gen:genPbiLayoutHtml},
+  shiny:  {file:"app.R",             gen:genShiny},
+  qdash:  {file:"dashboard.qmd",     gen:genQuartoDash},
+  qhtml:  {file:"report.qmd",        gen:genQuartoHtml},
+  flex:   {file:"flexdashboard.Rmd", gen:genFlex}
+};
+
 /* ---------- TAB: export ---------- */
 function slug(){return `${sourceName().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')}_${state.type}`;}
 function buildExport(){
+  // Ported Shiny generators (DAX, Power BI layout, Shiny, Quarto, flexdashboard)
+  if(CODE_FORMATS[state.exp]){
+    const fmt=CODE_FORMATS[state.exp];
+    $("#expFile").textContent=fmt.file;
+    return fmt.gen(codeConfig());
+  }
   const s=surf();const acc=accentHex();const f=fontDef();const sc=T.typeScale(state.baseSize,state.ratio);
   const pal=currentPalette();const hexes=pal.map(p=>p.hex);const sg=slug();
   const gradient=["sequential","continuous","tints","diverging"].includes(state.type);
@@ -339,6 +595,14 @@ $("#baseSize").oninput=e=>{state.baseSize=parseFloat(e.target.value);render();};
 $$("#weightSeg button").forEach(b=>b.onclick=()=>{state.weight=+b.dataset.w;render();});
 $$("#expSeg button").forEach(b=>b.onclick=()=>{state.exp=b.dataset.f;renderExport();});
 $("#expCopy").onclick=()=>copy($("#expCode").textContent,'Theme export copied');
+const expDl=$("#expDownload");
+if(expDl)expDl.onclick=()=>{
+  const name=$("#expFile").textContent||"gcps_export.txt";
+  const blob=new Blob([$("#expCode").textContent],{type:"text/plain;charset=utf-8"});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();
+  document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
 
 setTab("palette");
 })();
