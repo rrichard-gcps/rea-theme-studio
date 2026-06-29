@@ -120,15 +120,32 @@
 
   <!-- ============ EXPORT ============ -->
   <section class="panel-tab" id="tab-export">
-    <div class="row" style="margin-bottom:var(--s4)">
-      <span class="lbl">Format</span>
-      <div class="seg" id="expSeg"><button data-f="r" aria-pressed="true">R / ggplot2</button><button data-f="json">Power BI JSON</button><button data-f="css">CSS variables</button><button data-f="dax">Power BI DAX</button><button data-f="pbihtml">Power BI Layout</button><button data-f="shiny">R Shiny</button><button data-f="qdash">Quarto Dashboard</button><button data-f="qhtml">Quarto HTML</button><button data-f="flex">flexdashboard</button><button data-f="fabric">Fabric App</button></div>
+    <div style="margin-bottom:var(--s5)">
+      <span class="lbl" style="display:block;margin-bottom:var(--s3)">Format · grouped by tool</span>
+      <div class="exp-groups" id="expSeg">
+        <div class="exp-group">
+          <span class="exp-gl">R</span>
+          <div class="seg"><button data-f="r" aria-pressed="true">ggplot2 theme</button><button data-f="shiny">Shiny app</button><button data-f="qdash">Quarto Dashboard</button><button data-f="qhtml">Quarto HTML</button><button data-f="flex">flexdashboard</button></div>
+        </div>
+        <div class="exp-group">
+          <span class="exp-gl">Power BI</span>
+          <div class="seg"><button data-f="json">Theme JSON</button><button data-f="dax">DAX measures</button><button data-f="pbihtml">Layout HTML</button></div>
+        </div>
+        <div class="exp-group">
+          <span class="exp-gl">Microsoft Fabric</span>
+          <div class="seg"><button data-f="fabric">React app · .zip</button></div>
+        </div>
+        <div class="exp-group">
+          <span class="exp-gl">Design tokens</span>
+          <div class="seg"><button data-f="css">CSS variables</button></div>
+        </div>
+      </div>
     </div>
     <div class="export-card">
       <div class="export-head"><span class="file" id="expFile">gcps_theme.R</span><div class="row" style="gap:var(--s2)"><button class="copy-btn" id="expDownload">Download</button><button class="copy-btn" id="expCopy">Copy</button></div></div>
       <pre class="code" id="expCode"></pre>
     </div>
-    <div class="note"><b>One theme, every tool.</b> The first three formats export the theme/palette tokens. The rest are full starter files driven by the current theme: <span class="mono">Power BI DAX</span> layout measures, a <span class="mono">Power BI Layout</span> HTML scaffold, an <span class="mono">R Shiny</span> app, <span class="mono">Quarto Dashboard</span>/<span class="mono">Quarto HTML</span> documents, and a <span class="mono">flexdashboard</span>, and a <span class="mono">Fabric App</span> — each Copyable and Downloadable, ready to run in its tool. <span class="mono">Fabric App</span> downloads a <b>.zip</b> React + Tailwind Microsoft Fabric App scaffold (Rayfin data models + themed dashboard) — unzip, then <span class="mono">npm install · npm run dev</span>.</div>
+    <div class="note"><b>One theme, every tool.</b> <span class="mono">CSS variables</span> and <span class="mono">Theme JSON</span> export the raw theme/palette tokens; everything else is a full starter file driven by the current theme — the <span class="mono">R</span> group (ggplot2 theme, Shiny app, Quarto Dashboard/HTML, flexdashboard), the <span class="mono">Power BI</span> group (DAX layout measures, Layout HTML scaffold), and <span class="mono">Microsoft Fabric</span> (a React + Tailwind app scaffold with Rayfin data models and a themed dashboard). Every option is Copyable; Fabric downloads a <b>.zip</b> you unzip and run with <span class="mono">npm install · npm run dev</span>.</div>
   </section>
 </div>
 <div id="toast"></div>
