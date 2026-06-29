@@ -574,6 +574,241 @@ function genFlex(c){
   return [yaml,setup,kpi,chart.join("\n")].join("\n");
 }
 
+const FABRIC_STATIC = {"vite.config.ts": "import { defineConfig } from \"vite\";\nimport react from \"@vitejs/plugin-react\";\n\nexport default defineConfig({\n  plugins: [react()],\n});\n", "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"target\": \"ES2020\",\n    \"useDefineForClassFields\": true,\n    \"lib\": [\"ES2020\", \"DOM\", \"DOM.Iterable\"],\n    \"module\": \"ESNext\",\n    \"skipLibCheck\": true,\n    \"moduleResolution\": \"bundler\",\n    \"allowImportingTsExtensions\": true,\n    \"resolveJsonModule\": true,\n    \"isolatedModules\": true,\n    \"noEmit\": true,\n    \"jsx\": \"react-jsx\",\n    \"strict\": true,\n    \"noUnusedLocals\": true,\n    \"noUnusedParameters\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"experimentalDecorators\": true,\n    \"emitDecoratorMetadata\": true\n  },\n  \"include\": [\"src\"]\n}\n", "postcss.config.js": "export default {\n  plugins: {\n    tailwindcss: {},\n    autoprefixer: {},\n  },\n};\n", "tailwind.config.js": "export default {\n  content: [\n    \"./index.html\",\n    \"./src/**/*.{ts,tsx}\",\n  ],\n  theme: {\n    extend: {\n      colors: {\n        background: \"var(--background)\",\n        foreground: \"var(--foreground)\",\n        card: \"var(--card)\",\n        \"card-foreground\": \"var(--card-foreground)\",\n        primary: \"var(--primary)\",\n        \"primary-foreground\": \"var(--primary-foreground)\",\n        secondary: \"var(--secondary)\",\n        \"secondary-foreground\": \"var(--secondary-foreground)\",\n        muted: \"var(--muted)\",\n        \"muted-foreground\": \"var(--muted-foreground)\",\n        accent: \"var(--accent)\",\n        \"accent-foreground\": \"var(--accent-foreground)\",\n        border: \"var(--border)\",\n        ring: \"var(--ring)\",\n        success: \"var(--success)\",\n        warning: \"var(--warning)\",\n        danger: \"var(--danger)\",\n      },\n      borderRadius: {\n        sm: \"var(--radius-sm)\",\n        md: \"var(--radius-md)\",\n        lg: \"var(--radius-lg)\",\n        xl: \"var(--radius-xl)\",\n        full: \"var(--radius-full)\",\n      },\n      fontFamily: {\n        sans: \"var(--font-sans)\",\n        mono: \"var(--font-mono)\",\n      },\n    },\n  },\n  plugins: [],\n};\n", "rayfin/data/ThemeMetric.ts": "import { dateTime, entity, number, text, uuid } from \"@microsoft/rayfin\";\n\n@entity()\nexport class ThemeMetric {\n  @uuid()\n  id!: string;\n\n  @text()\n  label!: string;\n\n  @text()\n  category!: string;\n\n  @number()\n  value!: number;\n\n  @text({ optional: true })\n  unit?: string;\n\n  @text({ optional: true })\n  colorToken?: string;\n\n  @dateTime()\n  capturedAt!: Date;\n}\n", "rayfin/data/ThemeExport.ts": "import { dateTime, entity, text, uuid } from \"@microsoft/rayfin\";\n\n@entity()\nexport class ThemeExport {\n  @uuid()\n  id!: string;\n\n  @text()\n  name!: string;\n\n  @text()\n  exportType!: string;\n\n  @text({ optional: true })\n  description?: string;\n\n  @text({ optional: true })\n  themeJson?: string;\n\n  @dateTime()\n  createdAt!: Date;\n}\n", "rayfin/data/schema.ts": "import { ThemeExport } from \"./ThemeExport\";\nimport { ThemeMetric } from \"./ThemeMetric\";\n\nexport const schema = {\n  entities: [\n    ThemeExport,\n    ThemeMetric,\n  ],\n};\n", "src/types/theme.ts": "export type ThemeMetric = {\n  id: string;\n  label: string;\n  category: string;\n  value: number;\n  unit?: string;\n  colorToken?: string;\n  capturedAt: string;\n};\n\nexport type FabricThemeExport = {\n  name: string;\n  description?: string;\n  colors: {\n    background: string;\n    foreground: string;\n    card: string;\n    cardForeground: string;\n    primary: string;\n    primaryForeground: string;\n    secondary: string;\n    secondaryForeground: string;\n    muted: string;\n    mutedForeground: string;\n    accent: string;\n    accentForeground: string;\n    border: string;\n    ring: string;\n    success?: string;\n    warning?: string;\n    danger?: string;\n  };\n  radius: {\n    sm: string;\n    md: string;\n    lg: string;\n    xl: string;\n    full: string;\n  };\n  typography: {\n    fontSans: string;\n    fontMono?: string;\n    headingWeight?: string | number;\n    bodyWeight?: string | number;\n  };\n};\n", "src/data/sampleMetrics.ts": "import type { ThemeMetric } from \"../types/theme\";\n\nexport const sampleMetrics: ThemeMetric[] = [\n  {\n    id: \"theme-score\",\n    label: \"Theme Readiness\",\n    category: \"Quality\",\n    value: 92,\n    unit: \"%\",\n    colorToken: \"primary\",\n    capturedAt: new Date().toISOString(),\n  },\n  {\n    id: \"contrast-score\",\n    label: \"Contrast Coverage\",\n    category: \"Accessibility\",\n    value: 88,\n    unit: \"%\",\n    colorToken: \"success\",\n    capturedAt: new Date().toISOString(),\n  },\n  {\n    id: \"export-count\",\n    label: \"Export Options\",\n    category: \"Studio\",\n    value: 10,\n    unit: \"\",\n    colorToken: \"accent\",\n    capturedAt: new Date().toISOString(),\n  },\n  {\n    id: \"token-count\",\n    label: \"Theme Tokens\",\n    category: \"Design System\",\n    value: 34,\n    unit: \"\",\n    colorToken: \"warning\",\n    capturedAt: new Date().toISOString(),\n  },\n];\n", "src/hooks/useThemeMetrics.ts": "import { useEffect, useState } from \"react\";\nimport { sampleMetrics } from \"../data/sampleMetrics\";\nimport type { ThemeMetric } from \"../types/theme\";\n\nexport function useThemeMetrics() {\n  const [metrics, setMetrics] = useState<ThemeMetric[]>([]);\n  const [loading, setLoading] = useState(true);\n  const [error, setError] = useState<string | null>(null);\n\n  useEffect(() => {\n    try {\n      setLoading(true);\n\n      // Replace this sample data with a generated Rayfin/Fabric client query\n      // when the backend schema is deployed.\n      setMetrics(sampleMetrics);\n    } catch {\n      setError(\"Unable to load theme metrics.\");\n    } finally {\n      setLoading(false);\n    }\n  }, []);\n\n  return { metrics, loading, error };\n}\n", "src/lib/formatters.ts": "export function formatNumber(value: number) {\n  return new Intl.NumberFormat(\"en-US\").format(value);\n}\n\nexport function formatPercent(value: number) {\n  return new Intl.NumberFormat(\"en-US\", {\n    style: \"percent\",\n    maximumFractionDigits: 0,\n  }).format(value / 100);\n}\n", "src/components/KpiCard.tsx": "import type { ReactNode } from \"react\";\n\nexport type KpiCardProps = {\n  label: string;\n  value: string | number;\n  eyebrow?: string;\n  icon?: ReactNode;\n  tone?: \"primary\" | \"success\" | \"warning\" | \"danger\" | \"neutral\";\n};\n\nconst toneClasses: Record<NonNullable<KpiCardProps[\"tone\"]>, string> = {\n  primary: \"bg-primary/10 text-primary\",\n  success: \"bg-success/10 text-success\",\n  warning: \"bg-warning/10 text-warning\",\n  danger: \"bg-danger/10 text-danger\",\n  neutral: \"bg-muted text-muted-foreground\",\n};\n\nexport function KpiCard({ label, value, eyebrow, icon, tone = \"primary\" }: KpiCardProps) {\n  return (\n    <article className=\"rounded-xl border border-border bg-card p-5 text-card-foreground shadow-sm\">\n      <div className=\"flex items-start justify-between gap-4\">\n        <div>\n          {eyebrow ? <p className=\"text-sm font-medium text-muted-foreground\">{eyebrow}</p> : null}\n          <h3 className=\"mt-2 text-base font-semibold\">{label}</h3>\n        </div>\n        {icon ? (\n          <div className={`rounded-lg p-2 ${toneClasses[tone]}`}>\n            {icon}\n          </div>\n        ) : null}\n      </div>\n      <p className=\"mt-5 text-4xl font-bold tracking-tight\">{value}</p>\n    </article>\n  );\n}\n", "src/components/ThemeMetricBarChart.tsx": "import {\n  Bar,\n  BarChart,\n  CartesianGrid,\n  ResponsiveContainer,\n  Tooltip,\n  XAxis,\n  YAxis,\n} from \"recharts\";\nimport type { ThemeMetric } from \"../types/theme\";\n\nexport type ThemeMetricBarChartProps = {\n  data: ThemeMetric[];\n};\n\nexport function ThemeMetricBarChart({ data }: ThemeMetricBarChartProps) {\n  return (\n    <section className=\"rounded-xl border border-border bg-card p-6 text-card-foreground shadow-sm\">\n      <div className=\"mb-5\">\n        <h2 className=\"text-lg font-semibold\">Theme Studio Metrics</h2>\n        <p className=\"text-sm text-muted-foreground\">\n          Sample visual scaffold for a Fabric App frontend export.\n        </p>\n      </div>\n\n      <div className=\"h-80\">\n        <ResponsiveContainer width=\"100%\" height=\"100%\">\n          <BarChart data={data}>\n            <CartesianGrid vertical={false} strokeDasharray=\"3 3\" />\n            <XAxis dataKey=\"label\" tickLine={false} axisLine={false} />\n            <YAxis tickLine={false} axisLine={false} />\n            <Tooltip />\n            <Bar dataKey=\"value\" fill=\"var(--primary)\" radius={[8, 8, 0, 0]} />\n          </BarChart>\n        </ResponsiveContainer>\n      </div>\n    </section>\n  );\n}\n", "src/components/ThemePreviewPanel.tsx": "import { fabricTheme } from \"../lib/theme\";\n\nexport function ThemePreviewPanel() {\n  const swatches = Object.entries(fabricTheme.colors);\n\n  return (\n    <section className=\"rounded-xl border border-border bg-card p-6 text-card-foreground shadow-sm\">\n      <div className=\"mb-5\">\n        <h2 className=\"text-lg font-semibold\">Theme Preview</h2>\n        <p className=\"text-sm text-muted-foreground\">\n          Tokens exported from REA Theme Studio into a Fabric App sample.\n        </p>\n      </div>\n\n      <div className=\"grid gap-3 sm:grid-cols-2 lg:grid-cols-3\">\n        {swatches.map(([name, value]) => (\n          <div key={name} className=\"rounded-lg border border-border p-3\">\n            <div\n              className=\"mb-3 h-12 rounded-md border border-border\"\n              style={{ backgroundColor: value }}\n            />\n            <p className=\"text-sm font-medium\">{name}</p>\n            <p className=\"font-mono text-xs text-muted-foreground\">{value}</p>\n          </div>\n        ))}\n      </div>\n    </section>\n  );\n}\n", "src/components/AppShell.tsx": "import type { ReactNode } from \"react\";\n\nexport type AppShellProps = {\n  children: ReactNode;\n};\n\nexport function AppShell({ children }: AppShellProps) {\n  return (\n    <main className=\"min-h-screen bg-background text-foreground\">\n      <div className=\"mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8\">\n        <header className=\"rounded-xl border border-border bg-card p-6 text-card-foreground shadow-sm\">\n          <p className=\"text-sm font-semibold text-primary\">REA Theme Studio Export</p>\n          <h1 className=\"mt-2 text-3xl font-bold tracking-tight\">\n            Microsoft Fabric App Sample\n          </h1>\n          <p className=\"mt-2 max-w-3xl text-sm text-muted-foreground\">\n            This sample demonstrates how a REA theme can be exported into a React + Tailwind frontend for Microsoft Fabric Apps.\n          </p>\n        </header>\n        {children}\n      </div>\n    </main>\n  );\n}\n", "src/components/ExportOptionCard.tsx": "export function ExportOptionCard() {\n  return (\n    <section className=\"rounded-xl border border-border bg-card p-6 text-card-foreground shadow-sm\">\n      <h2 className=\"text-lg font-semibold\">Export Integration</h2>\n      <p className=\"mt-2 text-sm text-muted-foreground\">\n        Add this sample as an export option inside REA Theme Studio so designers and developers can generate a themed Fabric App frontend scaffold.\n      </p>\n      <div className=\"mt-4 rounded-lg bg-muted p-4 text-sm text-muted-foreground\">\n        Suggested label: <span className=\"font-semibold text-foreground\">Microsoft Fabric App Sample</span>\n      </div>\n    </section>\n  );\n}\n", "src/components/LoadingState.tsx": "export function LoadingState() {\n  return (\n    <div className=\"rounded-xl border border-border bg-card p-6 text-card-foreground shadow-sm\">\n      <p className=\"text-sm text-muted-foreground\">Loading theme metrics...</p>\n    </div>\n  );\n}\n", "src/components/EmptyState.tsx": "export function EmptyState() {\n  return (\n    <div className=\"rounded-xl border border-border bg-card p-6 text-card-foreground shadow-sm\">\n      <h2 className=\"text-lg font-semibold\">No metrics available</h2>\n      <p className=\"mt-2 text-sm text-muted-foreground\">\n        Add sample data or connect this app to the generated Fabric backend.\n      </p>\n    </div>\n  );\n}\n", "src/App.tsx": "import { Activity, Boxes, Palette, ShieldCheck } from \"lucide-react\";\nimport { AppShell } from \"./components/AppShell\";\nimport { EmptyState } from \"./components/EmptyState\";\nimport { ExportOptionCard } from \"./components/ExportOptionCard\";\nimport { KpiCard } from \"./components/KpiCard\";\nimport { LoadingState } from \"./components/LoadingState\";\nimport { ThemeMetricBarChart } from \"./components/ThemeMetricBarChart\";\nimport { ThemePreviewPanel } from \"./components/ThemePreviewPanel\";\nimport { useThemeMetrics } from \"./hooks/useThemeMetrics\";\n\nexport default function App() {\n  const { metrics, loading, error } = useThemeMetrics();\n\n  if (loading) {\n    return (\n      <AppShell>\n        <LoadingState />\n      </AppShell>\n    );\n  }\n\n  if (error) {\n    return (\n      <AppShell>\n        <div className=\"rounded-xl border border-danger/30 bg-danger/10 p-6 text-danger\">\n          {error}\n        </div>\n      </AppShell>\n    );\n  }\n\n  if (!metrics.length) {\n    return (\n      <AppShell>\n        <EmptyState />\n      </AppShell>\n    );\n  }\n\n  const [readiness, contrast, exports, tokens] = metrics;\n\n  return (\n    <AppShell>\n      <section className=\"grid gap-4 md:grid-cols-2 xl:grid-cols-4\">\n        <KpiCard\n          label={readiness.label}\n          value={`${readiness.value}${readiness.unit ?? \"\"}`}\n          eyebrow={readiness.category}\n          icon={<Activity className=\"h-5 w-5\" />}\n          tone=\"primary\"\n        />\n        <KpiCard\n          label={contrast.label}\n          value={`${contrast.value}${contrast.unit ?? \"\"}`}\n          eyebrow={contrast.category}\n          icon={<ShieldCheck className=\"h-5 w-5\" />}\n          tone=\"success\"\n        />\n        <KpiCard\n          label={exports.label}\n          value={exports.value}\n          eyebrow={exports.category}\n          icon={<Boxes className=\"h-5 w-5\" />}\n          tone=\"warning\"\n        />\n        <KpiCard\n          label={tokens.label}\n          value={tokens.value}\n          eyebrow={tokens.category}\n          icon={<Palette className=\"h-5 w-5\" />}\n          tone=\"neutral\"\n        />\n      </section>\n\n      <div className=\"grid gap-6 xl:grid-cols-[1.4fr_1fr]\">\n        <ThemeMetricBarChart data={metrics} />\n        <ExportOptionCard />\n      </div>\n\n      <ThemePreviewPanel />\n    </AppShell>\n  );\n}\n", "src/main.tsx": "import React from \"react\";\nimport ReactDOM from \"react-dom/client\";\nimport App from \"./App\";\nimport \"./global.css\";\n\nReactDOM.createRoot(document.getElementById(\"root\")!).render(\n  <React.StrictMode>\n    <App />\n  </React.StrictMode>\n);\n", "package.json": "{\n  \"name\": \"rea-fabric-app-sample\",\n  \"private\": true,\n  \"version\": \"0.1.0\",\n  \"type\": \"module\",\n  \"scripts\": {\n    \"dev\": \"vite --host 0.0.0.0\",\n    \"build\": \"tsc -b && vite build\",\n    \"preview\": \"vite preview\"\n  },\n  \"dependencies\": {\n    \"react\": \"^18.3.1\",\n    \"react-dom\": \"^18.3.1\",\n    \"lucide-react\": \"^0.456.0\",\n    \"recharts\": \"^2.13.3\"\n  },\n  \"devDependencies\": {\n    \"@types/react\": \"^18.3.12\",\n    \"@types/react-dom\": \"^18.3.1\",\n    \"@vitejs/plugin-react\": \"^4.3.4\",\n    \"vite\": \"^5.4.11\",\n    \"typescript\": \"^5.6.3\",\n    \"tailwindcss\": \"^3.4.15\",\n    \"postcss\": \"^8.4.49\",\n    \"autoprefixer\": \"^10.4.20\"\n  }\n}\n", "rayfin/rayfin.yml": "name: rea-fabric-app-sample\nservices:\n  frontend:\n    path: .\n", "rayfin/data/.gitkeep": ""};
+
+/* Map the live studio theme → the Fabric token shape (FabricThemeExport). */
+function fabricThemeFromState(){
+  const s=surf(); const acc=accentHex(); const f=fontDef();
+  const onAcc = T.contrast(acc,"#FFFFFF") >= T.contrast(acc,s.text) ? "#FFFFFF" : s.text;
+  return {
+    name:`REA ${sourceName()} — ${state.type}`,
+    description:"Generated from REA Theme Studio.",
+    colors:{
+      background:s.canvas, foreground:s.text,
+      card:s.surface, cardForeground:s.text,
+      primary:acc, primaryForeground:onAcc,
+      secondary:s.sunken, secondaryForeground:s.text,
+      muted:s.sunken, mutedForeground:s.text2,
+      accent:T.accentTint(acc), accentForeground:T.accentHover(acc),
+      border:s.border, ring:acc,
+      success:(GCPS_BASE.green||"#5E8C31").toUpperCase(),
+      warning:(GCPS_BASE.gold||"#C49A22").toUpperCase(),
+      danger:"#B42318"
+    },
+    radius:{ sm:"0.375rem", md:"0.625rem", lg:"0.875rem", xl:"1rem", full:"9999px" },
+    typography:{
+      fontSans:f.stack,
+      fontMono:"ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+      headingWeight:state.weight, bodyWeight:400
+    }
+  };
+}
+
+function fabricGlobalCss(tk){
+  const c=tk.colors,r=tk.radius,t=tk.typography;
+  return `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: ${c.background};
+  --foreground: ${c.foreground};
+  --card: ${c.card};
+  --card-foreground: ${c.cardForeground};
+  --primary: ${c.primary};
+  --primary-foreground: ${c.primaryForeground};
+  --secondary: ${c.secondary};
+  --secondary-foreground: ${c.secondaryForeground};
+  --muted: ${c.muted};
+  --muted-foreground: ${c.mutedForeground};
+  --accent: ${c.accent};
+  --accent-foreground: ${c.accentForeground};
+  --border: ${c.border};
+  --ring: ${c.ring};
+  --success: ${c.success};
+  --warning: ${c.warning};
+  --danger: ${c.danger};
+  --radius-sm: ${r.sm};
+  --radius-md: ${r.md};
+  --radius-lg: ${r.lg};
+  --radius-xl: ${r.xl};
+  --radius-full: ${r.full};
+  --font-sans: ${t.fontSans};
+  --font-mono: ${t.fontMono};
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--background);
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-weight: ${t.bodyWeight};
+}
+
+h1, h2, h3, h4 {
+  font-weight: ${t.headingWeight};
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+`;
+}
+
+function fabricThemeLib(tk){
+  return `import type { FabricThemeExport } from "../types/theme";
+
+export const fabricTheme: FabricThemeExport = ${JSON.stringify(tk,null,2)};
+`;
+}
+
+function fabricIndexHtml(tk){
+  return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${esc(tk.name)} · Fabric App</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+`;
+}
+
+function fabricReadme(tk){
+  return `# REA Fabric App Sample
+
+This project was generated from **REA Theme Studio** as a Microsoft Fabric App
+frontend sample, themed with: **${tk.name}**.
+
+## What is included
+
+- React + TypeScript frontend (Vite)
+- Tailwind CSS theme tokens generated from REA Theme Studio
+- Sample visual dashboard (KPI cards, bar chart, theme preview)
+- Rayfin / Fabric Apps data models
+- Entity registration in \`rayfin/data/schema.ts\`
+
+## Run locally
+
+\`\`\`bash
+npm install
+npm run dev
+\`\`\`
+
+## Fabric Apps / Rayfin workflow
+
+After configuring your Fabric workspace and Rayfin project settings:
+
+\`\`\`bash
+npx rayfin up db apply
+npx rayfin up
+npx rayfin up status
+\`\`\`
+
+## Data models
+
+Generated models live in:
+
+\`\`\`txt
+rayfin/data/ThemeMetric.ts
+rayfin/data/ThemeExport.ts
+rayfin/data/schema.ts
+\`\`\`
+
+Every entity must be registered in \`rayfin/data/schema.ts\`.
+
+## Next steps
+
+1. Replace sample metrics in \`src/data/sampleMetrics.ts\` with generated client/API data.
+2. Add real operational app entities in \`rayfin/data/\`.
+3. Keep nullable fields marked with \`{ optional: true }\`.
+4. Avoid direct many-to-many relationships; use explicit join entities.
+5. Deploy with \`npx rayfin up\`.
+`;
+}
+
+/* Assemble the full file set: live-theme dynamic files + static templates. */
+function generateFabricAppFiles(){
+  const tk=fabricThemeFromState();
+  const files=[
+    {path:"README.md", content:fabricReadme(tk)},
+    {path:"index.html", content:fabricIndexHtml(tk)},
+    {path:"src/global.css", content:fabricGlobalCss(tk)},
+    {path:"src/lib/theme.ts", content:fabricThemeLib(tk)}
+  ];
+  Object.keys(FABRIC_STATIC).forEach(p=>files.push({path:p, content:FABRIC_STATIC[p]}));
+  files.sort((a,b)=>a.path<b.path?-1:1);
+  return files;
+}
+
+/* ---------- minimal store-only ZIP writer (no deps, no CDN) ---------- */
+const CRC_TABLE=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[n]=c>>>0;}return t;})();
+function crc32(bytes){let c=0xFFFFFFFF;for(let i=0;i<bytes.length;i++)c=CRC_TABLE[(c^bytes[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function strBytes(s){return new TextEncoder().encode(s);}
+function u16(n){return [n&0xFF,(n>>>8)&0xFF];}
+function u32(n){return [n&0xFF,(n>>>8)&0xFF,(n>>>16)&0xFF,(n>>>24)&0xFF];}
+function zipFiles(files){
+  // Deterministic DOS timestamp: 1980-01-01 00:00:00
+  const dosTime=0, dosDate=(0<<9)|(1<<5)|1;
+  const chunks=[]; const central=[]; let offset=0;
+  files.forEach(f=>{
+    const nameB=strBytes(f.path); const dataB=strBytes(f.content); const crc=crc32(dataB);
+    const local=[].concat(
+      u32(0x04034b50),u16(20),u16(0),u16(0),u16(dosTime),u16(dosDate),
+      u32(crc),u32(dataB.length),u32(dataB.length),u16(nameB.length),u16(0)
+    );
+    const localHeader=new Uint8Array(local);
+    chunks.push(localHeader,nameB,dataB);
+    const cen=[].concat(
+      u32(0x02014b50),u16(20),u16(20),u16(0),u16(0),u16(dosTime),u16(dosDate),
+      u32(crc),u32(dataB.length),u32(dataB.length),u16(nameB.length),u16(0),u16(0),
+      u16(0),u16(0),u32(0),u32(offset)
+    );
+    central.push(new Uint8Array(cen),nameB);
+    offset+=localHeader.length+nameB.length+dataB.length;
+  });
+  let cenSize=0; central.forEach(c=>cenSize+=c.length);
+  const cenOffset=offset;
+  const end=new Uint8Array([].concat(
+    u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),
+    u32(cenSize),u32(cenOffset),u16(0)
+  ));
+  return new Blob([...chunks,...central,end],{type:"application/zip"});
+}
+
+/* Readable preview for the <pre>: file tree + the two key themed files. */
+function fabricPreview(){
+  const files=generateFabricAppFiles();
+  const tree=files.map(f=>"  "+f.path).join("\n");
+  const css=files.find(f=>f.path==="src/global.css").content;
+  const themeTs=files.find(f=>f.path==="src/lib/theme.ts").content;
+  return `Microsoft Fabric App Sample — ${files.length} files\n`+
+    `Download the .zip, then:  npm install  ·  npm run dev  ·  npx rayfin up\n`+
+    `\n# Project tree\n${tree}\n`+
+    `\n# src/global.css  (theme tokens from the current REA theme)\n${css}`+
+    `\n# src/lib/theme.ts\n${themeTs}`;
+}
+
 // format registry: id -> {label, file, gen}
 const CODE_FORMATS={
   dax:    {file:"rea_layout.dax",   gen:genDax},
@@ -587,6 +822,11 @@ const CODE_FORMATS={
 /* ---------- TAB: export ---------- */
 function slug(){return `${sourceName().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')}_${state.type}`;}
 function buildExport(){
+  // Microsoft Fabric App sample — themed React+Tailwind scaffold, downloaded as a .zip
+  if(state.exp==="fabric"){
+    $("#expFile").textContent="rea-fabric-app-sample.zip";
+    return fabricPreview();
+  }
   // Ported Shiny generators (DAX, Power BI layout, Shiny, Quarto, flexdashboard)
   if(CODE_FORMATS[state.exp]){
     const fmt=CODE_FORMATS[state.exp];
@@ -717,7 +957,9 @@ $("#expCopy").onclick=()=>copy($("#expCode").textContent,'Theme export copied');
 const expDl=$("#expDownload");
 if(expDl)expDl.onclick=()=>{
   const name=$("#expFile").textContent||"gcps_export.txt";
-  const blob=new Blob([$("#expCode").textContent],{type:"text/plain;charset=utf-8"});
+  const blob=(state.exp==="fabric")
+    ? zipFiles(generateFabricAppFiles())
+    : new Blob([$("#expCode").textContent],{type:"text/plain;charset=utf-8"});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');
   a.href=url;a.download=name;document.body.appendChild(a);a.click();
   document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(url),1000);
