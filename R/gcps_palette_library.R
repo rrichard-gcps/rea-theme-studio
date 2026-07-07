@@ -145,9 +145,30 @@ gcps_perf_base <- function(hex, n = 4) {
   }, character(1))
   .df(seq_len(n), hex_out, semantic = PERF_NAMES[[as.character(n)]])
 }
+# Milestones performance gradient — Warm-to-Cool (Burnt Sienna -> Goldenrod ->
+# Forest Green), interpolated in OKLCH with shortest-arc hue. Ordered, unlabeled
+# stops (labeled Low/High at the ends) for binning performance data. n = 3|5|7.
+MILESTONE_ANCHORS <- c("#C0593C", "#D19C2F", "#297864")
+gcps_perf_gradient <- function(n = 5) {
+  stops <- lapply(MILESTONE_ANCHORS, hex_to_oklch)
+  segs <- length(stops) - 1
+  hex_out <- vapply(seq_len(n), function(i) {
+    f <- ((i - 1) / (n - 1)) * segs
+    idx <- min(floor(f), segs - 1)
+    lt <- f - idx
+    a <- stops[[idx + 1]]; b <- stops[[idx + 2]]
+    dh <- b[["H"]] - a[["H"]]
+    if (dh > 180) dh <- dh - 360
+    if (dh < -180) dh <- dh + 360
+    oklch_to_hex(.lerp(a[["L"]], b[["L"]], lt), .lerp(a[["C"]], b[["C"]], lt),
+                 (a[["H"]] + dh * lt + 360) %% 360)
+  }, character(1))
+  sem <- rep(NA_character_, n); sem[1] <- "Low"; sem[n] <- "High"
+  .df(seq_len(n), hex_out, semantic = sem)
+}
 gcps_trend <- function() {
   .df(c("+", "-", "="),
-      c(GCPS_BASE[["green"]], "#B42318", GCPS_BASE[["neutral"]]),
+      c(GCPS_BASE[["forest"]], "#B42318", GCPS_BASE[["slate"]]),
       semantic = c("Positive \u00b7 improvement", "Negative \u00b7 decline", "Neutral \u00b7 no change"))
 }
 
@@ -165,7 +186,7 @@ gcps_source_color <- function(mode, key) {
 # perf_variant: semantic|base ; perf_n: 4|5|6 ; mode/key let diverging pick its partner
 gcps_build_palette <- function(source_hex, type,
                                scheme = "analogous", perf_n = 4, perf_variant = "semantic",
-                               mode = "bases", key = NULL) {
+                               perf_stops = 5, mode = "bases", key = NULL) {
   switch(type,
     sequential = gcps_sequential(source_hex),
     tints      = gcps_tints(source_hex),
@@ -175,10 +196,15 @@ gcps_build_palette <- function(source_hex, type,
       other <- if (mode == "bases" && !is.null(key)) unname(GCPS_BASE[[ DIVERGE_PAIR[[key]] ]]) else .complement(source_hex)
       gcps_diverging(source_hex, other)
     },
-    performance = if (perf_variant == "semantic") gcps_perf_semantic(perf_n) else gcps_perf_base(source_hex, perf_n),
+    performance = switch(perf_variant,
+      gradient = gcps_perf_gradient(perf_stops),
+      base     = gcps_perf_base(source_hex, perf_n),
+      gcps_perf_semantic(perf_n)),
     categorical = {
       if (scheme == "gcps")          .df(seq_along(GCPS_QUALITATIVE), GCPS_QUALITATIVE, paste("Series", seq_along(GCPS_QUALITATIVE)))
       else if (scheme == "clusters") .df(seq_along(ALL_CLUSTERS_CAT), ALL_CLUSTERS_CAT, paste("Series", seq_along(ALL_CLUSTERS_CAT)))
+      else if (scheme == "race")     .df(seq_along(CAT_RACE_COLORS), CAT_RACE_COLORS, CAT_RACE_NAMES)
+      else if (scheme == "school")   .df(seq_along(CAT_SCHOOL_COLORS), CAT_SCHOOL_COLORS, CAT_SCHOOL_NAMES)
       else                           gcps_categorical_theory(source_hex, scheme, 8)
     },
     stop("unknown palette type: ", type)
@@ -223,6 +249,7 @@ gcps_css_vars <- function(df, prefix = "gcps") {
 #     -> "#CA564B" "#C6661B" "#B77900" "#9D8C00" "#7B9C37" "#4FA866"
 #   gcps_source_color("clusters","Brookwood")  -> "#660000"
 #   gcps_source_color("schools","Alcova ES")   -> "#CCCC99"  (Dacula)
+#   gcps_perf_gradient(3)$hex   -> "#C0593C" "#D19C2F" "#297864"  (Sienna->Goldenrod->Forest)
 # Tolerance: exact (integer RGB). If a value is off by 1, check the cube-root
 # (use x^(1/3); inputs are non-negative for in-gamut colors).
 # =============================================================================

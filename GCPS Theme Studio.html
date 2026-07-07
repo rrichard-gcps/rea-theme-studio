@@ -235,10 +235,12 @@ pre.code{margin:0;padding:var(--s4) var(--s5);overflow:auto;font-family:var(--mo
       </div>
       <div class="subctrls" id="catCtrls"><span class="lbl">Set</span><div class="seg" id="catSetSeg"></div></div>
       <div class="subctrls" id="perfCtrls">
-        <span class="lbl">Levels</span>
+        <span class="lbl">Scale</span>
+        <div class="seg" id="perfVariant"><button data-v="semantic" aria-pressed="true">Semantic</button><button data-v="base">Source-tinted</button><button data-v="gradient">Milestones gradient</button></div>
+        <span class="lbl" id="perfLevelsLbl" style="margin-left:var(--s3)">Levels</span>
         <div class="seg" id="perfLevels"><button data-n="4" aria-pressed="true">4 · Milestones</button><button data-n="5">5</button><button data-n="6">6 · ACCESS</button></div>
-        <span class="lbl" style="margin-left:var(--s3)">Scale</span>
-        <div class="seg" id="perfVariant"><button data-v="semantic" aria-pressed="true">Semantic</button><button data-v="base">Source-tinted</button></div>
+        <span class="lbl" id="perfStopsLbl" style="margin-left:var(--s3);display:none">Stops</span>
+        <div class="seg" id="perfStops" style="display:none"><button data-s="3">3</button><button data-s="5" aria-pressed="true">5</button><button data-s="7">7</button></div>
       </div>
       <div class="subctrls" id="countCtrls"><span class="lbl">Colors</span><div class="row" id="countWidget"></div></div>
       <div style="margin-top:var(--s5)">
@@ -329,6 +331,17 @@ pre.code{margin:0;padding:var(--s4) var(--s5);overflow:auto;font-family:var(--mo
   </section>
 </div>
 <div id="toast"></div>
+
+<template id="__bundler_thumbnail" data-bg-color="#660000">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#660000"/>
+    <rect x="360" y="250" width="80" height="300" rx="10" fill="#F4EAEA"/>
+    <rect x="470" y="190" width="80" height="360" rx="10" fill="#E0CACA"/>
+    <rect x="580" y="300" width="80" height="250" rx="10" fill="#F7F6F3"/>
+    <rect x="690" y="220" width="80" height="330" rx="10" fill="#CFCBC0"/>
+    <rect x="800" y="280" width="80" height="270" rx="10" fill="#F4EAEA"/>
+  </svg>
+</template>
 
 <script src="palette-data.js"></script>
 <script src="theme-studio.js"></script>

@@ -106,9 +106,9 @@ DEFAULT_CONFIG <- list(
     font_size_heading = 18
   ),
   palette = list(
-    base_name = "teal",
-    base = "#007C91",
-    ramp = c("#C7E2E7", "#8CC4CE", "#4CA3B2", "#007C91", "#006677")
+    base_name = "ocean",
+    base = "#2D708E",
+    ramp = c("#D1E4EE", "#9CBFD1", "#6296B0", "#2D708E", "#07526E")
   ),
   annotations = list(enabled = FALSE)
 )
@@ -118,46 +118,36 @@ DEFAULT_CONFIG <- list(
   if (is.null(a) || (length(a) == 1 && is.na(a))) b else a
 }
 
-# GCPS Color System
+# GCPS Color System — 7 analytics bases, Prompt design tokens (anchor + 6 primaries)
 gcps_base <- c(
   maroon = "#660000",
-  blue = "#2F5FB3",
-  teal = "#007C91",
-  green = "#5E8C31",
-  violet = "#6A4CC3",
-  orange = "#D96A1D",
-  neutral = "#7A828C",
-  gold = "#C49A22",
-  plum = "#7B2D8B",
-  slate = "#4A6D8C",
-  emerald = "#1A7D5A"
+  ocean = "#2D708E",
+  forest = "#297864",
+  sienna = "#C0593C",
+  amethyst = "#715981",
+  goldenrod = "#D19C2F",
+  slate = "#5B6D7A"
 )
 
 gcps_ramps <- list(
-  maroon = c("#DDC7C7", "#BA8C8C", "#944C4C", "#660000", "#540000"),
-  blue = c("#D1DCEE", "#A1B7DD", "#6D8FCA", "#2F5FB3", "#274E93"),
-  teal = c("#C7E2E7", "#8CC4CE", "#4CA3B2", "#007C91", "#006677"),
-  green = c("#DCE6D2", "#B7CBA2", "#8EAE6F", "#5E8C31", "#4D7328"),
-  violet = c("#DED8F2", "#BCAEE4", "#9782D5", "#6A4CC3", "#573EA0"),
-  orange = c("#F7DECD", "#EEBC99", "#E49761", "#D96A1D", "#B25718"),
-  neutral = c("#F4F5F7", "#E3E6EA", "#B6BCC4", "#7A828C", "#4B525A"),
-  gold = c("#F5EBC8", "#E3CC7E", "#C49A22", "#9A7A10", "#7A600D"),
-  plum = c("#EDDCF1", "#C990D5", "#7B2D8B", "#5E1E6B", "#421450"),
-  slate = c("#D5DEE6", "#A0B4C4", "#4A6D8C", "#355270", "#233850"),
-  emerald = c("#C8E8DE", "#7DC4AB", "#1A7D5A", "#126347", "#0C4A35")
+  maroon = c("#F0CEC8", "#CB9188", "#9A4B40", "#660000", "#510000"),
+  ocean = c("#D1E4EE", "#9CBFD1", "#6296B0", "#2D708E", "#07526E"),
+  forest = c("#D0E6DF", "#9CC3B6", "#619C8B", "#297864", "#005A47"),
+  sienna = c("#FEDAD0", "#EEB19F", "#DA826A", "#C0593C", "#98361A"),
+  amethyst = c("#E4DCEA", "#BFB1CA", "#9782A5", "#715981", "#543E63"),
+  goldenrod = c("#F8E8CC", "#ECCE9B", "#E0B464", "#D19C2F", "#A27000"),
+  slate = c("#DBE1E6", "#B1BCC4", "#83929E", "#5B6D7A", "#3F4F5C")
 )
 
+# diverging partner per base — opposite temperature (mirrors DIVERGE_PAIR)
 gcps_diverging <- list(
-  maroon = c("#540000", "#944C4C", "#F3F4F6", "#4CA3B2", "#006677"),
-  blue = c("#274E93", "#6D8FCA", "#F3F4F6", "#E49761", "#B25718"),
-  teal = c("#006677", "#4CA3B2", "#F3F4F6", "#BA8C8C", "#540000"),
-  green = c("#4D7328", "#8EAE6F", "#F3F4F6", "#BCAEE4", "#573EA0"),
-  violet = c("#573EA0", "#9782D5", "#F3F4F6", "#8EAE6F", "#4D7328"),
-  orange = c("#B25718", "#E49761", "#F3F4F6", "#6D8FCA", "#274E93"),
-  gold = c("#7A600D", "#E3CC7E", "#F3F4F6", "#8CC4CE", "#006677"),
-  plum = c("#421450", "#C990D5", "#F3F4F6", "#8EAE6F", "#4D7328"),
-  slate = c("#233850", "#A0B4C4", "#F3F4F6", "#E49761", "#B25718"),
-  emerald = c("#0C4A35", "#7DC4AB", "#F3F4F6", "#BA8C8C", "#540000")
+  maroon = c("#570000", "#AC7067", "#F3F4F6", "#7DA1B4", "#105A77"),
+  ocean = c("#105A77", "#7DA1B4", "#F3F4F6", "#D29280", "#A23E21"),
+  forest = c("#05614E", "#7CA699", "#F3F4F6", "#A293AC", "#5B446B"),
+  sienna = c("#A23E21", "#D29280", "#F3F4F6", "#7DA1B4", "#105A77"),
+  amethyst = c("#5B446B", "#A293AC", "#F3F4F6", "#7CA699", "#05614E"),
+  goldenrod = c("#AE7A00", "#D1B27C", "#F3F4F6", "#7DA1B4", "#105A77"),
+  slate = c("#455763", "#939EA6", "#F3F4F6", "#AC7067", "#570000")
 )
 
 font_families <- c(
@@ -1398,6 +1388,125 @@ generate_flexdashboard <- function(config) {
   paste(c(yaml_block, setup_chunk, kpi_section, chart_lines), collapse = "\n")
 }
 
+# ── generate_deneb_bar / generate_deneb_line ──────────────────────────────────
+# Vega-Lite v5 specs for Power BI's Deneb custom visual. Themed from the same
+# config as every other exporter (config$theme/typography/palette). Ships
+# with the tool's existing deterministic sample rows (demo_schools /
+# demo_trend_years / demo_trend_pcts from R/demo_data_k12.R) embedded as
+# data.values so pasting the spec into Deneb's editor renders immediately;
+# once the user maps their own columns in the visual's Fields pane, Deneb
+# uses that live data instead. Field names in "encoding" match the sample
+# data so remapping is a straight rename.
+generate_deneb_bar <- function(config) {
+  font <- config$typography$font_family %||% "'Segoe UI', system-ui, sans-serif"
+  accent <- config$palette$base %||% config$theme$accent
+
+  spec <- list(
+    `$schema` = "https://vega.github.io/schema/vega-lite/v5.json",
+    title = list(text = "School Proficiency", color = config$theme$text_primary),
+    usermeta = list(instructions = paste(
+      "Deneb starter (bar) from the GCPS Theme Studio, themed to your current",
+      "palette and typography. Paste into a Deneb visual's spec editor — it",
+      "renders immediately using the sample rows embedded below. Map your own",
+      "columns in the visual's Fields pane to 'school' and 'proficiency' (or",
+      "rename the fields in the encoding block below to match your columns)",
+      "and Deneb uses your live data instead."
+    )),
+    data = list(values = lapply(seq_len(nrow(demo_schools)), function(i) {
+      list(
+        school = demo_schools$school[i],
+        proficiency = demo_schools$proficiency[i]
+      )
+    })),
+    mark = list(type = "bar", cornerRadiusEnd = 2),
+    encoding = list(
+      x = list(
+        field = "school",
+        type = "nominal",
+        sort = "-y",
+        title = "School",
+        axis = list(labelAngle = -40)
+      ),
+      y = list(
+        field = "proficiency",
+        type = "quantitative",
+        title = "% Proficient/Distinguished"
+      ),
+      color = list(value = accent),
+      tooltip = list(
+        list(field = "school", type = "nominal", title = "School"),
+        list(field = "proficiency", type = "quantitative", title = "% Prof/Dist")
+      )
+    ),
+    config = list(
+      background = config$theme$bg_card,
+      font = font,
+      title = list(color = config$theme$text_primary, font = font),
+      axis = list(
+        labelColor = config$theme$text_secondary,
+        titleColor = config$theme$text_primary,
+        gridColor = config$theme$border,
+        domainColor = config$theme$border,
+        labelFont = font,
+        titleFont = font
+      ),
+      view = list(stroke = "transparent")
+    )
+  )
+  jsonlite::toJSON(spec, auto_unbox = TRUE, pretty = TRUE, null = "null")
+}
+
+generate_deneb_line <- function(config) {
+  font <- config$typography$font_family %||% "'Segoe UI', system-ui, sans-serif"
+  accent <- config$palette$base %||% config$theme$accent
+  pct_num <- as.numeric(sub("%", "", demo_trend_pcts))
+
+  spec <- list(
+    `$schema` = "https://vega.github.io/schema/vega-lite/v5.json",
+    title = list(text = "5-Year Proficiency Trend", color = config$theme$text_primary),
+    usermeta = list(instructions = paste(
+      "Deneb starter (line) from the GCPS Theme Studio, themed to your current",
+      "palette and typography. Paste into a Deneb visual's spec editor — it",
+      "renders immediately using the sample rows embedded below. Map your own",
+      "columns in the visual's Fields pane to 'year' and 'pct' (or rename the",
+      "fields in the encoding block below to match your columns) and Deneb",
+      "uses your live data instead."
+    )),
+    data = list(values = lapply(seq_along(demo_trend_years), function(i) {
+      list(year = demo_trend_years[i], pct = pct_num[i])
+    })),
+    mark = list(type = "line", point = TRUE, strokeWidth = 2.5),
+    encoding = list(
+      x = list(field = "year", type = "ordinal", title = "School Year"),
+      y = list(
+        field = "pct",
+        type = "quantitative",
+        title = "% Proficient/Distinguished"
+      ),
+      color = list(value = accent),
+      tooltip = list(
+        list(field = "year", type = "ordinal", title = "School Year"),
+        list(field = "pct", type = "quantitative", title = "% Prof/Dist")
+      )
+    ),
+    config = list(
+      background = config$theme$bg_card,
+      font = font,
+      title = list(color = config$theme$text_primary, font = font),
+      axis = list(
+        labelColor = config$theme$text_secondary,
+        titleColor = config$theme$text_primary,
+        gridColor = config$theme$border,
+        domainColor = config$theme$border,
+        labelFont = font,
+        titleFont = font
+      ),
+      view = list(stroke = "transparent")
+    )
+  )
+  jsonlite::toJSON(spec, auto_unbox = TRUE, pretty = TRUE, null = "null")
+}
+
 generate_dax <- function(config) {
   paste(
     c(
@@ -2314,6 +2423,26 @@ ui <- page_sidebar(
                 class = "btn-primary btn-sm"
               )
             )
+          ),
+          card(
+            card_header(class = "bg-light", strong("Power BI Layout (.pbip)")),
+            card_body(
+              p(
+                class = "text-muted small",
+                "Same .pbip project, plus a \"Layout\" page with one text-box",
+                "visual per header/sidebar/KPI/grid-cell section — positioned",
+                "at the canvas layout you built in the Architect."
+              ),
+              tags$pre(
+                class = "small text-muted",
+                "GCPS-Report.pbip\nGCPS-Report.Report/definition/pages/Layout/...\nGCPS-Report.SemanticModel/...\nREADME.md"
+              ),
+              downloadButton(
+                "download_tmpl_pbip_layout",
+                "Download .zip",
+                class = "btn-primary btn-sm"
+              )
+            )
           )
         )
       )
@@ -2424,6 +2553,62 @@ ui <- page_sidebar(
           "Starter flexdashboard (.Rmd) themed with bslib::bs_theme()."
         ),
         div(class = "code-output", verbatimTextOutput("flex_output"))
+      )
+    ),
+
+    # Deneb Bar Chart Tab
+    nav_panel(
+      title = "Deneb Bar",
+      value = "deneb_bar_tab",
+      div(
+        class = "p-3",
+        div(
+          class = "d-flex gap-2 mb-3",
+          downloadButton(
+            "download_deneb_bar",
+            "Download .json",
+            class = "btn-primary btn-sm"
+          ),
+          actionButton(
+            "copy_deneb_bar",
+            "Copy Code",
+            class = "btn-outline-primary btn-sm"
+          )
+        ),
+        p(
+          class = "text-muted small",
+          "Vega-Lite spec for a themed Deneb bar chart, with sample data",
+          "baked in so it renders immediately in Power BI."
+        ),
+        div(class = "code-output", verbatimTextOutput("deneb_bar_output"))
+      )
+    ),
+
+    # Deneb Line Chart Tab
+    nav_panel(
+      title = "Deneb Line",
+      value = "deneb_line_tab",
+      div(
+        class = "p-3",
+        div(
+          class = "d-flex gap-2 mb-3",
+          downloadButton(
+            "download_deneb_line",
+            "Download .json",
+            class = "btn-primary btn-sm"
+          ),
+          actionButton(
+            "copy_deneb_line",
+            "Copy Code",
+            class = "btn-outline-primary btn-sm"
+          )
+        ),
+        p(
+          class = "text-muted small",
+          "Vega-Lite spec for a themed Deneb line chart, with sample data",
+          "baked in so it renders immediately in Power BI."
+        ),
+        div(class = "code-output", verbatimTextOutput("deneb_line_output"))
       )
     ),
 
@@ -2543,6 +2728,8 @@ tags_style <- tags$style(HTML(
   .code-output #quarto_dash_output,
   .code-output #quarto_html_output,
   .code-output #flex_output,
+  .code-output #deneb_bar_output,
+  .code-output #deneb_line_output,
   .code-output #powerbi_output,
   .code-output #dax_output,
   .code-output #json_output,
@@ -2829,6 +3016,14 @@ server <- function(input, output, session) {
     generate_flexdashboard(build_config())
   })
 
+  output$deneb_bar_output <- renderText({
+    generate_deneb_bar(build_config())
+  })
+
+  output$deneb_line_output <- renderText({
+    generate_deneb_line(build_config())
+  })
+
   # Power BI HTML output
   output$powerbi_output <- renderText({
     config <- build_config()
@@ -2880,6 +3075,16 @@ server <- function(input, output, session) {
   output$download_flex <- downloadHandler(
     filename = function() paste0("flexdash-", format(Sys.Date(), "%Y%m%d"), ".Rmd"),
     content = function(file) writeLines(generate_flexdashboard(build_config()), file)
+  )
+
+  output$download_deneb_bar <- downloadHandler(
+    filename = function() paste0("deneb-bar-", format(Sys.Date(), "%Y%m%d"), ".json"),
+    content = function(file) writeLines(generate_deneb_bar(build_config()), file)
+  )
+
+  output$download_deneb_line <- downloadHandler(
+    filename = function() paste0("deneb-line-", format(Sys.Date(), "%Y%m%d"), ".json"),
+    content = function(file) writeLines(generate_deneb_line(build_config()), file)
   )
 
   output$download_powerbi <- downloadHandler(
@@ -2939,6 +3144,14 @@ server <- function(input, output, session) {
 
   observeEvent(input$copy_flex, {
     session$sendCustomMessage("copy_to_clipboard", generate_flexdashboard(build_config()))
+  })
+
+  observeEvent(input$copy_deneb_bar, {
+    session$sendCustomMessage("copy_to_clipboard", generate_deneb_bar(build_config()))
+  })
+
+  observeEvent(input$copy_deneb_line, {
+    session$sendCustomMessage("copy_to_clipboard", generate_deneb_line(build_config()))
   })
 
   observeEvent(input$copy_powerbi, {
@@ -3043,6 +3256,14 @@ server <- function(input, output, session) {
     content = function(file) {
       t <- gcps_resolve_theme(input$ts_theme)
       gcps_write_template_zip(gcps_template_pbip(t), file)
+    },
+    contentType = "application/zip"
+  )
+  output$download_tmpl_pbip_layout <- downloadHandler(
+    filename = function() tmpl_kind("powerbi-pbip-layout"),
+    content = function(file) {
+      t <- gcps_resolve_theme(input$ts_theme)
+      gcps_write_template_zip(gcps_template_pbip(t, build_config()), file)
     },
     contentType = "application/zip"
   )

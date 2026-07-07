@@ -19,7 +19,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 # The GCPS default — Warm Paper surfaces, District Maroon accent, Source Sans 3,
-# 15px @ 1.2 ratio, teal sequential ramp. MUST match the studio's first paint
+# 15px @ 1.2 ratio, ocean sequential ramp. MUST match the studio's first paint
 # (state defaults in www/theme-studio-app.js lines 12-24).
 gcps_default_theme <- function() {
   sc <- list(
@@ -32,9 +32,9 @@ gcps_default_theme <- function() {
     h1 = 25.9,
     display = 31.1
   )
-  pal_hex <- c("#B8DBE0", "#79B8C3", "#3F9CA9", "#007C91", "#005E70")
+  pal_hex <- c("#DFF2FC", "#AAC8D7", "#789FB3", "#467890", "#07526E")
   list(
-    source = "Teal",
+    source = "Ocean",
     type = "sequential",
     canvas = "#F7F6F3",
     surface = "#FFFFFF",
@@ -860,6 +860,224 @@ gcps_template_powerbi <- function(t) {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Canvas layout → Power BI visual containers
+# ─────────────────────────────────────────────────────────────────────────────
+# `config` here is the ARCHITECT's build_config() output (canvas/header/
+# sidebar/content geometry + theme), not the Studio theme list `t` used
+# everywhere else in this file. Mirrors the exact pixel math already used by
+# build_header_html()/build_sidebar_html()/build_kpi_html()/build_grid_html()/
+# build_grid_html_bycol() in app.R (same helpers: parse_proportions,
+# calc_pixels, parse_row_proportions, get_containers_per_row/col) but returns
+# structured rects instead of HTML, for placing Power BI visual containers.
+gcps_layout_rects <- function(config) {
+  rects <- list()
+  add_rect <- function(id, label, x, y, width, height) {
+    rects[[length(rects) + 1]] <<- list(
+      id = id,
+      label = label,
+      x = x,
+      y = y,
+      width = width,
+      height = height
+    )
+  }
+
+  add_rect("header", "Header", 0, 0, config$canvas$width, config$header$height)
+
+  main_height <- config$canvas$height - config$header$height
+  main_width <- config$canvas$width - config$sidebar$width
+  add_rect(
+    "sidebar",
+    "Sidebar",
+    0,
+    config$header$height,
+    config$sidebar$width,
+    main_height
+  )
+
+  # KPI row — same math as build_kpi_html().
+  total_available <- main_width - config$content$padding * 2
+  kpi_props <- parse_proportions(
+    config$content$kpi_proportions,
+    config$content$kpi_count
+  )
+  kpi_widths <- calc_pixels(
+    total_available,
+    config$content$kpi_gap,
+    kpi_props,
+    config$content$kpi_count
+  )
+  x_off <- 0
+  for (i in seq_len(config$content$kpi_count)) {
+    w <- kpi_widths[i]
+    add_rect(
+      paste0("kpi_", i),
+      paste0("KPI ", i),
+      config$sidebar$width + config$content$padding + x_off,
+      config$header$height + config$content$padding,
+      w,
+      config$content$kpi_height
+    )
+    x_off <- x_off + w + config$content$kpi_gap
+  }
+
+  # Content grid — same math as build_grid_html()/build_grid_html_bycol().
+  content_height <- main_height -
+    config$content$kpi_height -
+    config$content$kpi_gap -
+    config$content$padding * 2
+  grid_y0 <- config$header$height +
+    config$content$padding +
+    config$content$kpi_height +
+    config$content$kpi_gap
+  layout_type <- config$content$layout_type
+
+  if (identical(layout_type, "bycol")) {
+    containers_per_col <- get_containers_per_col(config)
+    num_cols <- length(containers_per_col)
+    col_props <- parse_proportions(config$content$col_widths, num_cols)
+    col_widths <- calc_pixels(
+      main_width - config$content$padding * 2,
+      config$content$grid_gap,
+      col_props,
+      num_cols
+    )
+    row_props_per_col <- parse_row_proportions(
+      config$content$row_heights_per_col,
+      containers_per_col
+    )
+    cell_idx <- 1
+    x_off <- 0
+    for (col in seq_len(num_cols)) {
+      rows <- containers_per_col[col]
+      cw <- col_widths[col]
+      row_heights <- calc_pixels(
+        content_height,
+        config$content$grid_gap,
+        row_props_per_col[[col]],
+        rows
+      )
+      y_off <- 0
+      for (row in seq_len(rows)) {
+        rh <- row_heights[row]
+        add_rect(
+          paste0("grid_", cell_idx),
+          paste0("Chart ", cell_idx),
+          config$sidebar$width + config$content$padding + x_off,
+          grid_y0 + y_off,
+          cw,
+          rh
+        )
+        cell_idx <- cell_idx + 1
+        y_off <- y_off + rh + config$content$grid_gap
+      }
+      x_off <- x_off + cw + config$content$grid_gap
+    }
+  } else {
+    containers_per_row <- get_containers_per_row(config)
+    num_rows <- length(containers_per_row)
+    if (identical(layout_type, "freeform")) {
+      row_props <- parse_proportions(config$content$ff_row_heights, num_rows)
+    } else if (identical(layout_type, "byrow")) {
+      row_props <- parse_proportions(config$content$row_proportions, num_rows)
+    } else {
+      row_props <- NULL
+    }
+    row_heights <- calc_pixels(
+      content_height,
+      config$content$grid_gap,
+      row_props,
+      num_rows
+    )
+
+    if (identical(layout_type, "freeform")) {
+      num_cols <- if (!is.null(config$content$ff_cols)) {
+        config$content$ff_cols
+      } else {
+        containers_per_row[1]
+      }
+      col_props <- parse_proportions(config$content$ff_col_widths, num_cols)
+      col_props_list <- replicate(num_rows, col_props, simplify = FALSE)
+    } else if (identical(layout_type, "byrow")) {
+      col_props_list <- parse_row_proportions(
+        config$content$col_widths_per_row,
+        containers_per_row
+      )
+    } else {
+      col_props_list <- replicate(num_rows, NULL, simplify = FALSE)
+    }
+
+    cell_idx <- 1
+    y_off <- 0
+    for (row in seq_len(num_rows)) {
+      cols <- containers_per_row[row]
+      rh <- row_heights[row]
+      col_w <- calc_pixels(
+        main_width - config$content$padding * 2,
+        config$content$grid_gap,
+        col_props_list[[row]],
+        cols
+      )
+      x_off <- 0
+      for (col in seq_len(cols)) {
+        cw <- col_w[col]
+        add_rect(
+          paste0("grid_", cell_idx),
+          paste0("Chart ", cell_idx),
+          config$sidebar$width + config$content$padding + x_off,
+          grid_y0 + y_off,
+          cw,
+          rh
+        )
+        cell_idx <- cell_idx + 1
+        x_off <- x_off + cw + config$content$grid_gap
+      }
+      y_off <- y_off + rh + config$content$grid_gap
+    }
+  }
+
+  rects
+}
+
+# Emits definition/pages/<page>/visuals/<id>/visual.json for one labeled
+# rectangle, using Power BI's native "textbox" visual (position + a single
+# text run — the most stable, longest-standing part of the report-visual
+# schema, shared with the legacy Report/Layout format). Deliberately skips
+# fill/border "objects" styling to minimize the risk of Desktop rejecting an
+# unfamiliar nested property; positions are exact regardless.
+gcps_pbir_textbox_visual <- function(id, label, x, y, z, width, height) {
+  jsonlite::toJSON(
+    list(
+      `$schema` = "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/visualContainer.json",
+      name = id,
+      position = list(
+        x = round(x),
+        y = round(y),
+        z = z,
+        width = round(width),
+        height = round(height),
+        tabOrder = z
+      ),
+      visual = list(
+        visualType = "textbox",
+        objects = list(
+          general = list(list(
+            properties = list(
+              paragraphs = list(list(
+                textRuns = list(list(value = label))
+              ))
+            )
+          ))
+        )
+      )
+    ),
+    auto_unbox = TRUE,
+    pretty = TRUE,
+    null = "null"
+  )
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Part D — Power BI .pbip project scaffold (PBIR enhanced-report format)
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -867,7 +1085,13 @@ gcps_template_powerbi <- function(t) {
 # (preview features: ".pbip save option" + "PBIR enhanced metadata" enabled).
 # Reuses the B2 report-theme JSON as the theme payload — single source.
 # JSON/TMDL kept minimal + schema-valid; assumptions documented in README.
-gcps_template_pbip <- function(t) {
+#
+# `config` (optional) is the Architect's build_config() output. When
+# supplied, adds a second page ("Layout") with one textbox visual per
+# header/sidebar/KPI/grid-cell rect from gcps_layout_rects(config) — the
+# canvas layout the user built in the Architect, placed on an actual Power BI
+# report page. Page1 (blank, themed) is unchanged and still included.
+gcps_template_pbip <- function(t, config = NULL) {
   base <- "GCPS-Report"
   rep_dir <- paste0(base, ".Report")
   sm_dir <- paste0(base, ".SemanticModel")
@@ -1012,6 +1236,19 @@ gcps_template_pbip <- function(t) {
     "  is identical to the standalone Power BI theme bundle.\n"
   )
 
+  if (!is.null(config)) {
+    readme <- paste0(
+      readme,
+      "\n## Layout page\n\n",
+      "The **Layout** page (opens by default) has one text-box visual per\n",
+      "header/sidebar/KPI/grid-cell section of the canvas layout you built in\n",
+      "the Architect — positioned at the exact x/y/width/height it renders at\n",
+      "in the app's Preview tab. Swap each text box for a real visual (Card,\n",
+      "chart, slicer, etc.) at the same position, or resize as needed. `Page1`\n",
+      "(blank, themed) is still included.\n"
+    )
+  }
+
   tree <- list()
   tree[[paste0(base, ".pbip")]] <- pbip
   tree[[paste0(rep_dir, "/definition.pbir")]] <- pbir
@@ -1026,6 +1263,42 @@ gcps_template_pbip <- function(t) {
   tree[[paste0(sm_dir, "/definition/database.tmdl")]] <- tmdl
   tree[[".gitignore"]] <- gitignore
   tree[["README.md"]] <- readme
+
+  if (!is.null(config)) {
+    rects <- gcps_layout_rects(config)
+    layout_page_json <- jsonlite::toJSON(
+      list(
+        `$schema` = "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/1.0.0/page.json",
+        name = "Layout",
+        displayName = "Layout",
+        width = config$canvas$width,
+        height = config$canvas$height
+      ),
+      auto_unbox = TRUE,
+      pretty = TRUE
+    )
+    tree[[paste0(rep_dir, "/definition/pages/Layout/page.json")]] <- layout_page_json
+    for (i in seq_along(rects)) {
+      r <- rects[[i]]
+      tree[[paste0(
+        rep_dir,
+        "/definition/pages/Layout/visuals/",
+        r$id,
+        "/visual.json"
+      )]] <- gcps_pbir_textbox_visual(r$id, r$label, r$x, r$y, i, r$width, r$height)
+    }
+    # Layout page opens by default; Page1 (blank, themed) stays available.
+    tree[[paste0(rep_dir, "/definition/pages/pages.json")]] <- jsonlite::toJSON(
+      list(
+        `$schema` = "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/pages/1.0.0/pages.json",
+        pageOrder = list("Layout", "Page1"),
+        activePageName = "Layout"
+      ),
+      auto_unbox = TRUE,
+      pretty = TRUE
+    )
+  }
+
   tree
 }
 

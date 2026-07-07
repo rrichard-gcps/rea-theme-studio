@@ -3,24 +3,43 @@
 // Repurposed from tableau_palettes.xml, cluster_colors_and_logos.csv, DimSchool.csv
 // ============================================================================
 
-// 8 REA analytics bases (from app.R gcps_base)
+// 7 GCPS analytics bases — Prompt design tokens (anchor + 6 primaries)
 const GCPS_BASE = {
-  maroon:"#660000", blue:"#2F5FB3", teal:"#007C91", green:"#5E8C31",
-  violet:"#6A4CC3", orange:"#D96A1D", neutral:"#7A828C",
-  gold:"#C49A22"
+  maroon:"#660000", ocean:"#2D708E", forest:"#297864", sienna:"#C0593C",
+  amethyst:"#715981", goldenrod:"#D19C2F", slate:"#5B6D7A"
 };
-const BASE_ORDER = ["maroon","blue","teal","green","violet","orange","neutral","gold"];
+const BASE_ORDER = ["maroon","ocean","forest","sienna","amethyst","goldenrod","slate"];
 const BASE_DESC = {
-  maroon:"District signature", blue:"Cool neutral category", teal:"Density & intensity",
-  green:"Growth, positive", violet:"Distinct categorical", orange:"Attention, secondary",
-  neutral:"Structure & gridlines", gold:"Warm highlight, recognition"
+  maroon:"Deep Maroon · district anchor, high-magnitude sequential",
+  ocean:"Ocean Blue · cool primary, focus groups",
+  forest:"Forest Green · growth, positive",
+  sienna:"Burnt Sienna · warm attention, comparison",
+  amethyst:"Amethyst · distinct categorical, balanced weight",
+  goldenrod:"Goldenrod · warm highlight, comparison",
+  slate:"Slate · structure, gridlines, neutral category"
 };
-// diverging partner for the 8 bases (mirrors gcps_diverging)
-const DIVERGE_PAIR = { maroon:"teal", teal:"maroon", blue:"orange", orange:"blue", green:"violet", violet:"green", neutral:"maroon",
-  gold:"teal" };
+// diverging partner per base — paired by opposite temperature (colorblind-distinct poles)
+const DIVERGE_PAIR = { maroon:"ocean", ocean:"sienna", forest:"amethyst", sienna:"ocean", amethyst:"forest", goldenrod:"ocean", slate:"maroon" };
+// Prompt neutrals (surface anchors, not a chart hue)
+const GCPS_NEUTRALS = { light:"#F4F4F6", dark:"#2A2A2E" };
 
 // Curated GCPS qualitative palette (gcps_viz_palette_test)
 const GCPS_QUALITATIVE = ["#374E8E","#4FBBAE","#DF7C18","#AC004F","#1B87AA","#E3B13E","#CE4631","#8D7A81","#7E7E8F"];
+
+// Prompt design tokens — fixed-identity qualitative categories (consistent order, no inherent meaning per color)
+const CAT_RACE = {
+  colors:["#2D708E","#C0593C","#297864","#D19C2F","#715981","#5B6D7A"],
+  names:["Asian","Black","Hispanic","American Indian","Multiracial","White"]
+};
+const CAT_SCHOOL = {
+  colors:["#4E95B8","#489E88","#D87A60","#8D779C"],
+  names:["Elementary","Middle","High","Special School"]
+};
+// Interchangeable binary analytical lenses (equal saturation/weight — ML, FRL, Gifted, SWD)
+const LENS_BINARY = {
+  lens1:{ focus:"#2D708E", comparison:"#D19C2F" },
+  lens2:{ focus:"#297864", comparison:"#715981" }
+};
 
 // 21 cluster brand colors (cluster_colors_and_logos.csv + GCPS Clusters XML; Norcross = navy #1D2252 not the CSV's grey)
 const CLUSTERS = {

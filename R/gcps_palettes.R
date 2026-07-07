@@ -14,35 +14,27 @@
 # Hard-coded family names — must match names(gcps_ramps) defined later in app.R
 FAMILY_NAMES <- c(
   "maroon",
-  "blue",
-  "teal",
-  "green",
-  "violet",
-  "orange",
-  "neutral",
-  "gold",
-  "plum",
-  "slate",
-  "emerald"
+  "ocean",
+  "forest",
+  "sienna",
+  "amethyst",
+  "goldenrod",
+  "slate"
 )
 
 FAMILY_LABELS <- c(
   maroon = "District signature \u00B7 headers, primary emphasis",
-  blue = "Sequential \u00B7 cool, neutral category",
-  teal = "Sequential \u00B7 density & intensity",
-  green = "Sequential \u00B7 growth, positive metrics",
-  violet = "Sequential \u00B7 distinct categorical",
-  orange = "Sequential \u00B7 attention, secondary emphasis",
-  neutral = "Sequential \u00B7 neutral, supporting tones",
-  gold = "Sequential \u00B7 warm highlight, award & recognition",
-  plum = "Sequential \u00B7 deep contrast, adult literacy & workforce",
-  slate = "Sequential \u00B7 steel-blue, operations & infrastructure",
-  emerald = "Sequential \u00B7 deep green, sustainability & wellness"
+  ocean = "Sequential \u00B7 cool primary, focus groups",
+  forest = "Sequential \u00B7 growth, positive metrics",
+  sienna = "Sequential \u00B7 warm attention, comparison",
+  amethyst = "Sequential \u00B7 distinct categorical, balanced weight",
+  goldenrod = "Sequential \u00B7 warm highlight, comparison",
+  slate = "Sequential \u00B7 structure, gridlines, neutral category"
 )
 
 STOPS <- c(100, 300, 500, 700, 900)
 
-DEFAULT_GCPS_FAMILY <- "teal"
+DEFAULT_GCPS_FAMILY <- "ocean"
 
 # build_gcps_theme(family)
 # Builds a Power BI theme list using the 5-stop ramp from gcps_ramps[[family]].

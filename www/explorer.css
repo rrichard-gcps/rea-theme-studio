@@ -68,57 +68,57 @@
 
   /* Maroon — district signature */
   --gcps-maroon-base: #660000;
-  --gcps-maroon-100: #DDC7C7;
-  --gcps-maroon-300: #BA8C8C;
-  --gcps-maroon-500: #944C4C;
+  --gcps-maroon-100: #F0CEC8;
+  --gcps-maroon-300: #CB9188;
+  --gcps-maroon-500: #9A4B40;
   --gcps-maroon-700: #660000;
-  --gcps-maroon-900: #540000;
+  --gcps-maroon-900: #510000;
 
-  /* Blue */
-  --gcps-blue-base: #2F5FB3;
-  --gcps-blue-100: #D1DCEE;
-  --gcps-blue-300: #A1B7DD;
-  --gcps-blue-500: #6D8FCA;
-  --gcps-blue-700: #2F5FB3;
-  --gcps-blue-900: #274E93;
+  /* Ocean — cool primary */
+  --gcps-ocean-base: #2D708E;
+  --gcps-ocean-100: #D1E4EE;
+  --gcps-ocean-300: #9CBFD1;
+  --gcps-ocean-500: #6296B0;
+  --gcps-ocean-700: #2D708E;
+  --gcps-ocean-900: #07526E;
 
-  /* Teal */
-  --gcps-teal-base: #007C91;
-  --gcps-teal-100: #C7E2E7;
-  --gcps-teal-300: #8CC4CE;
-  --gcps-teal-500: #4CA3B2;
-  --gcps-teal-700: #007C91;
-  --gcps-teal-900: #006677;
+  /* Forest — growth, positive */
+  --gcps-forest-base: #297864;
+  --gcps-forest-100: #D0E6DF;
+  --gcps-forest-300: #9CC3B6;
+  --gcps-forest-500: #619C8B;
+  --gcps-forest-700: #297864;
+  --gcps-forest-900: #005A47;
 
-  /* Green */
-  --gcps-green-base: #5E8C31;
-  --gcps-green-100: #DCE6D2;
-  --gcps-green-300: #B7CBA2;
-  --gcps-green-500: #8EAE6F;
-  --gcps-green-700: #5E8C31;
-  --gcps-green-900: #4D7328;
+  /* Sienna — warm attention */
+  --gcps-sienna-base: #C0593C;
+  --gcps-sienna-100: #FEDAD0;
+  --gcps-sienna-300: #EEB19F;
+  --gcps-sienna-500: #DA826A;
+  --gcps-sienna-700: #C0593C;
+  --gcps-sienna-900: #98361A;
 
-  /* Violet */
-  --gcps-violet-base: #6A4CC3;
-  --gcps-violet-100: #DED8F2;
-  --gcps-violet-300: #BCAEE4;
-  --gcps-violet-500: #9782D5;
-  --gcps-violet-700: #6A4CC3;
-  --gcps-violet-900: #573EA0;
+  /* Amethyst — distinct categorical */
+  --gcps-amethyst-base: #715981;
+  --gcps-amethyst-100: #E4DCEA;
+  --gcps-amethyst-300: #BFB1CA;
+  --gcps-amethyst-500: #9782A5;
+  --gcps-amethyst-700: #715981;
+  --gcps-amethyst-900: #543E63;
 
-  /* Orange */
-  --gcps-orange-base: #D96A1D;
-  --gcps-orange-100: #F7DECD;
-  --gcps-orange-300: #EEBC99;
-  --gcps-orange-500: #E49761;
-  --gcps-orange-700: #D96A1D;
-  --gcps-orange-900: #B25718;
+  /* Goldenrod — warm highlight */
+  --gcps-goldenrod-base: #D19C2F;
+  --gcps-goldenrod-100: #F8E8CC;
+  --gcps-goldenrod-300: #ECCE9B;
+  --gcps-goldenrod-500: #E0B464;
+  --gcps-goldenrod-700: #D19C2F;
+  --gcps-goldenrod-900: #A27000;
 
-  /* Neutral */
-  --gcps-neutral-base: #7A828C;
-  --gcps-neutral-100: #F4F5F7;
-  --gcps-neutral-300: #E3E6EA;
-  --gcps-neutral-500: #B6BCC4;
-  --gcps-neutral-700: #7A828C;
-  --gcps-neutral-900: #4B525A;
+  /* Slate — structure, neutral */
+  --gcps-slate-base: #5B6D7A;
+  --gcps-slate-100: #DBE1E6;
+  --gcps-slate-300: #B1BCC4;
+  --gcps-slate-500: #83929E;
+  --gcps-slate-700: #5B6D7A;
+  --gcps-slate-900: #3F4F5C;
 }
