@@ -44,12 +44,15 @@
       else if(i===half){out.push({n:0,hex:"#F3F4F6"});}
       else{const t=(i-half)/half;out.push({n:i-half,hex:oklchToHex(lerp(0.94,Lb*0.85,t),lerp(Cb*0.18,Cb,t),Hb)});}}return out;}
 
-  const BRAND_CAT=["#2F5FB3","#D96A1D","#007C91","#5E8C31","#6A4CC3","#660000","#7A828C"];
+  const BRAND_CAT=["#2D708E","#C0593C","#297864","#715981","#D19C2F","#660000","#5B6D7A"];
   const CAT_SETS={
-    brand:   {label:"GCPS Brand",  colors:BRAND_CAT,           names:null, desc:"The seven GCPS analytics bases, ordered for maximum adjacent contrast."},
+    brand:   {label:"GCPS Brand",  colors:BRAND_CAT,           names:null, desc:"The seven GCPS analytics bases (anchor + six primaries), ordered for maximum adjacent contrast."},
+    race:    {label:"Race / Ethnicity", colors:CAT_RACE.colors, names:CAT_RACE.names, fixed:true, desc:"Fixed-identity palette for race/ethnicity — consistent order, equal visual weight, no meaning assigned to any single color."},
+    school:  {label:"School Level", colors:CAT_SCHOOL.colors, names:CAT_SCHOOL.names, fixed:true, desc:"Fixed-identity palette for school level (Elementary → Special School) — structural, non-judgmental."},
     curated: {label:"GCPS Curated",colors:GCPS_QUALITATIVE,  names:null, desc:"Nine hand-tuned qualitative hues repurposed from the GCPS Tableau library."},
     clusters:{label:"All Clusters",colors:CLUSTER_ORDER.map(k=>CLUSTERS[k]), names:CLUSTER_ORDER, desc:"High-school cluster brand colors, labeled by cluster."}
   };
+  function catFixedMax(setKey){const s=CAT_SETS[setKey];return s&&s.fixed?s.colors.length:null;}
   function extendCat(colors,n){
     if(n<=colors.length)return colors.slice(0,n);
     const out=colors.slice();let i=0;
@@ -61,7 +64,19 @@
   const PERF_NAMES={4:["Beginning","Developing","Proficient","Distinguished"],5:["Beginning","Developing","Approaching","Proficient","Distinguished"],6:["Entering","Beginning","Developing","Expanding","Bridging","Reaching"]};
   function perfSemantic(n){return Array.from({length:n},(_,i)=>{const t=i/(n-1);return {n:i+1,hex:oklchToHex(lerp(0.60,0.66,t),lerp(0.15,0.13,t),lerp(28,150,t)),sem:PERF_NAMES[n][i]};});}
   function perfBase(hex,n){const [L,C,H]=hexToOklch(hex);return Array.from({length:n},(_,i)=>{const t=i/(n-1);return {n:i+1,hex:oklchToHex(lerp(0.86,L*0.82,t),C*lerp(0.4,1.0,t),H),sem:PERF_NAMES[n][i]};});}
-  function trend(){return [{n:"+",hex:GCPS_BASE.green.toUpperCase(),sem:"Positive · improvement"},{n:"\u2013",hex:"#B42318",sem:"Negative · decline"},{n:"=",hex:GCPS_BASE.neutral.toUpperCase(),sem:"Neutral · no change"}];}
+  // Milestones performance gradient — Warm-to-Cool (Burnt Sienna → Goldenrod → Forest Green),
+  // interpolated in OKLCH. Ordered, unlabeled stops for binning performance data (3/5/7).
+  const MILESTONE_ANCHORS=["#C0593C","#D19C2F","#297864"];
+  function perfGradient(n){
+    const stops=MILESTONE_ANCHORS.map(hexToOklch), segs=stops.length-1;
+    return Array.from({length:n},(_,i)=>{
+      const f=(i/(n-1))*segs, idx=Math.min(Math.floor(f),segs-1), lt=f-idx;
+      const a=stops[idx], b=stops[idx+1];
+      let dh=b[2]-a[2]; if(dh>180)dh-=360; if(dh<-180)dh+=360;
+      return {n:i+1, hex:oklchToHex(lerp(a[0],b[0],lt), lerp(a[1],b[1],lt), (a[2]+dh*lt+360)%360)};
+    });
+  }
+  function trend(){return [{n:"+",hex:GCPS_BASE.forest.toUpperCase(),sem:"Positive · improvement"},{n:"\u2013",hex:"#B42318",sem:"Negative · decline"},{n:"=",hex:GCPS_BASE.slate.toUpperCase(),sem:"Neutral · no change"}];}
 
   /* ---------- Typography ---------- */
   // Fonts curated for K-12 dashboards exported to Power BI / R / Quarto.
@@ -102,15 +117,17 @@
   };
   // Accent options: maroon (district) + the 7 analytics bases.
   function accentOptions(){
-    return BASE_ORDER.map(k=>({id:k,label:k.charAt(0).toUpperCase()+k.slice(1),hex:GCPS_BASE[k]}));
+    return [{id:"maroon",label:"District Maroon",hex:"#660000"}].concat(
+      BASE_ORDER.map(k=>({id:k,label:k.charAt(0).toUpperCase()+k.slice(1),hex:GCPS_BASE[k]}))
+    );
   }
   function accentTint(hex){const [L,C,H]=hexToOklch(hex);return oklchToHex(lerp(L,0.97,0.86),C*0.22,H);}
   function accentHover(hex){const [L,C,H]=hexToOklch(hex);return oklchToHex(L*0.82,C,H);}
 
   G.TS = {
     hexToRgb,rgbToHex,hexToOklch,oklchToHex,relLum,contrast,contrastWhite,rating,
-    sequential,tints,continuous,diverging,categorical,perfSemantic,perfBase,trend,
-    CAT_SETS,extendCat,PERF_NAMES,
+    sequential,tints,continuous,diverging,categorical,perfSemantic,perfBase,perfGradient,trend,
+    CAT_SETS,extendCat,catFixedMax,PERF_NAMES,
     FONTS,SCALE_RATIOS,typeScale,
     SURFACES,accentOptions,accentTint,accentHover
   };

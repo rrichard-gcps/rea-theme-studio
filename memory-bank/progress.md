@@ -182,3 +182,231 @@ Added to `gcps_base`, `gcps_ramps`, `gcps_diverging` in `app.R` and `FAMILY_NAME
  app.R                         | 440 +++++++++++++++++++++++++++++++++++++++++-
  www/_theme_studio_markup.html |  10 +-
  3 files changed, 452 insertions(+), 10 deletions(-)
+---
+
+## New — Canvas layout → Power BI, and Deneb chart exports (Claude Code, design-handoff session)
+
+Two new, additive exports requested directly (no upstream Cline prompt for
+these — spec came from user chat). No existing generator, tab, or the
+`.pbip` theme scaffold was modified in place; everything below is new code
+alongside it.
+
+### 1. Canvas layout → Power BI `.pbip` "Layout" page
+
+A true binary `.pbix`/`.pbit` can't be hand-built outside Power BI Desktop or
+the Fabric/XMLA APIs (it embeds a compiled Analysis Services data model).
+Extended the existing `.pbip`/PBIR scaffold instead — the only format where
+real visual containers can be placed at real coordinates without a compiled
+model.
+
+- `R/generate_templates.R`:
+  - `gcps_layout_rects(config)` — new pure function. Takes the *Architect's*
+    `build_config()` output (not the Studio theme `t`) and returns one rect
+    per header/sidebar/KPI-card/grid-cell, mirroring the exact pixel math in
+    `build_header_html()`/`build_sidebar_html()`/`build_kpi_html()`/
+    `build_grid_html()`/`build_grid_html_bycol()` (same helpers:
+    `parse_proportions`, `calc_pixels`, `parse_row_proportions`,
+    `get_containers_per_row/col`) — covers all four layout modes (uniform,
+    byrow, bycol, freeform). Verified against `DEFAULT_CONFIG` in a Node port
+    of the same math: all rects positive-size and within canvas bounds.
+  - `gcps_pbir_textbox_visual(...)` — emits one PBIR `visual.json` per rect
+    as a Power BI native "textbox" visual (position + one text run only —
+    fill/border "objects" styling deliberately omitted to minimize the risk
+    of Desktop rejecting an unfamiliar nested property; positions are exact
+    regardless).
+  - `gcps_template_pbip(t, config = NULL)` — signature extended
+    (backward-compatible default). When `config` is supplied, adds a second
+    page ("Layout", opens by default via `pages.json` `activePageName`) with
+    one textbox per rect. `Page1` (blank, themed) is untouched and still
+    included. README gets an appended "Layout page" section when `config` is
+    passed.
+- `app.R`: new "Power BI Layout (.pbip)" card in the Project Templates grid
+  (8th card, after the existing "Power BI .pbip Project" card) +
+  `output$download_tmpl_pbip_layout`, calling
+  `gcps_template_pbip(t, build_config())`. The existing `download_tmpl_pbip`,
+  `download_tmpl_all`, and `gcps_template_all()`/`gcps_write_all_zip()` are
+  untouched — this is a new, separate button.
+
+**Caveat documented in the generated README (and worth repeating here):**
+the PBIR visual-container schema is Microsoft's, evolves with Desktop
+versions, and isn't fully public. Positions (x/y/width/height) are the part
+of the schema that's stable and well-understood, and are exact. If Desktop
+rejects or silently normalizes the textbox `visual.objects` block on first
+open, that's expected — same caveat the existing `.pbip` README already
+carries for the overall format; re-saving from Desktop normalizes it.
+
+### 2. Deneb chart exports (bar + line)
+
+New "starter code" tabs following the exact Quarto/flexdashboard pattern
+(nav_panel + `renderText` output + `downloadButton` + `actionButton` copy),
+inserted after "flexdashboard" and before "Power BI HTML":
+
+- `generate_deneb_bar(config)` / `generate_deneb_line(config)` in `app.R`
+  (next to `generate_flexdashboard`) — each emits a Vega-Lite v5 spec via
+  `jsonlite::toJSON`, themed from the same `config` every other exporter
+  reads (`config$theme$bg_card/text_primary/text_secondary/border`,
+  `config$typography$font_family`, `config$palette$base` for the data color).
+  Ships with the tool's existing deterministic sample rows embedded as
+  `data.values` (bar: `demo_schools` school/proficiency; line:
+  `demo_trend_years`/`demo_trend_pcts` from `R/demo_data_k12.R`, reused
+  as-is, not duplicated) so pasting the spec into Deneb's spec editor renders
+  immediately. A `usermeta.instructions` field (valid JSON, not a comment)
+  explains that mapping real columns in the Deneb visual's Fields pane
+  (named to match the sample fields: `school`/`proficiency` or `year`/`pct`)
+  makes Deneb use the live data instead.
+- Tabs: `deneb_bar_tab` (title "Deneb Bar"), `deneb_line_tab` (title "Deneb
+  Line") — `download_deneb_bar`/`download_deneb_line` (.json),
+  `copy_deneb_bar`/`copy_deneb_line`. `.code-output` CSS selector list
+  extended with `#deneb_bar_output`/`#deneb_line_output` to match the
+  existing per-tab styling convention.
+
+### Not done / explicitly out of scope this round
+- The "Download all" template zip and `gcps_template_all()` still only
+  produce the theme-only `.pbip` (no Layout page) — left untouched by
+  choice to avoid touching a shared, already-tested code path for a
+  single-button addition.
+- No stub semantic model / real Card-and-chart visuals on the Layout page —
+  per your call, this round ships text-box placeholders only.
+- Color palette / categorical-palette refinement (flagged by you as a
+  separate, later task) not touched.
+
+### Verification
+No R runtime available in this environment. Verified via:
+- Brace/paren/bracket balance check on both edited files (identical to the
+  pre-edit baseline plus my additions, no net imbalance introduced).
+- A Node.js port of `gcps_layout_rects()`'s exact math, run against the real
+  `DEFAULT_CONFIG` (1600×900 canvas, 4 KPIs, uniform 2×2 grid) — all 10
+  rects (header, sidebar, 4 KPIs, 4 grid cells) land at positive size, fully
+  within canvas bounds, matching the same coordinates the CSS/HTML preview
+  already renders at.
+- Grep-verified every new identifier (nav_panel `value`, `output$...`,
+  `input$copy_...`, CSS `#...`) appears exactly once, in the expected spot.
+- **Not yet verified**: actually opening the generated `.pbip` in Power BI
+  Desktop, or pasting a Deneb spec into a live Deneb visual. Recommend doing
+  both before relying on this in production — flag back here if either
+  needs a fix.
+
+---
+
+## New — Palette re-key to "Prompt" design tokens + Milestones gradient + Race/School categoricals (Claude Code, design-handoff session)
+
+Applied an external design handoff (`Analytics_Template_Generator_2.zip`,
+`design_handoff_palette_milestones/`) that replaces the 7/11-base analytics
+palette with a re-keyed, 7-token "Prompt" set and adds new palette
+capabilities. User confirmed (via explicit question) to adopt the re-key
+everywhere rather than layer the new features onto the old key names.
+
+### Base palette re-key
+`gcps_base` renamed/recolored from
+`{maroon, blue, teal, green, violet, orange, neutral, gold, plum, slate, emerald}`
+(11 keys) to `{maroon, ocean, forest, sienna, amethyst, goldenrod, slate}`
+(7 keys):
+- `maroon #660000` (unchanged · district anchor)
+- `ocean #2D708E` (cool primary)
+- `forest #297864` (growth / positive)
+- `sienna #C0593C` (warm attention)
+- `amethyst #715981` (categorical)
+- `goldenrod #D19C2F` (warm highlight)
+- `slate #5B6D7A` (structure / neutral)
+
+`gold`, `plum`, and `emerald` are dropped as named bases; `blue`/`teal`/
+`green`/`violet`/`orange`/`neutral` are replaced by the new keys above.
+Default base changed from `teal` to `ocean` throughout (`DEFAULT_CONFIG`,
+`DEFAULT_GCPS_FAMILY`, studio first-paint state).
+
+### Files touched
+- `app.R` — `gcps_base`, `gcps_ramps`, `gcps_diverging`, `DEFAULT_CONFIG$palette`
+  re-keyed. Ramps/diverging values recomputed (not hand-picked) from the OKLCH
+  engine's own formulas — `gcps_ramps` via the 5-stop sequential formula that
+  anchors position 4 (700) to the exact base hex (matches
+  `R/gcps_palette_library.R`'s `gcps_sequential()`), `gcps_diverging` via the
+  generic 5-stop diverging function paired per the new `DIVERGE_PAIR` map.
+  Verified against the reference R module's own `ACCEPTANCE` hex values before
+  applying (exact match).
+- `R/gcps_palettes.R` — `FAMILY_NAMES`, `FAMILY_LABELS`, `DEFAULT_GCPS_FAMILY`
+  re-keyed to match.
+- `R/gcps_palette_data.R`, `R/gcps_palette_library.R` — replaced with the
+  handoff's `shiny-R/` versions (re-keyed `GCPS_BASE`/`DIVERGE_PAIR`, new
+  `GCPS_NEUTRALS`, `CAT_RACE_*`/`CAT_SCHOOL_*`, `MILESTONE_ANCHORS` +
+  `gcps_perf_gradient()`, `gcps_build_palette()` gains `perf_stops` +
+  `gradient` variant + `race`/`school` categorical schemes). These files are
+  not currently `source()`-d by `app.R` — kept in sync as the documented R
+  reference spec, per the handoff's intent.
+- `R/generate_templates.R` — `gcps_default_theme()` fallback (source label +
+  `pal_hex`) updated from the old teal ramp to the ocean ramp so it still
+  matches the studio's first-paint state.
+- `palette-library/palette-data.js`, `palette-library/theme-studio.js`,
+  `www/palette-data.js`, `www/theme-studio.js`, `GCPS Theme Studio.html` —
+  replaced with the handoff's `src/` versions verbatim. Verified first that
+  the currently-committed versions of these three were a clean subset of the
+  handoff's versions (no functions/markup lost), so a verbatim swap was safe.
+- `palette-library/theme-studio-app.js` / `www/theme-studio-app.js` —
+  **NOT** replaced verbatim. The handoff's `src/theme-studio-app.js` (323
+  lines) turned out to be forked from a much older point in this repo's
+  history than what's actually committed (969 lines) — it's missing the
+  Microsoft Fabric App export, the DAX/Quarto/Shiny/flexdashboard code
+  generators, and the interactive Theme Preview, all shipped in later
+  commits. Overwriting would have deleted all of that. Instead, applied only
+  the scoped delta the handoff's own README describes: `baseKey`/default
+  rekeyed to `ocean`, `perfStops` state, `DIVERGE_PAIR_` rekeyed,
+  `catMax()` capped via `T.catFixedMax()`, a `gradient` branch in
+  `currentPalette()`, `semLabel()` Low/High for the gradient ends, and the
+  Stops button wiring/visibility toggle (mirrors the `perfVariant`/
+  `perfLevels` pattern already in the file). Also fixed one incidental bug
+  this surfaced: `fabricThemeFromState()`'s `success`/`warning` colors read
+  `GCPS_BASE.green`/`GCPS_BASE.gold`, which no longer exist post-rekey
+  (silently fell back to hardcoded hex via `||`) — repointed to
+  `GCPS_BASE.forest`/`GCPS_BASE.goldenrod`.
+- `www/_theme_studio_markup.html` — the Shiny app's embedded studio-tab
+  fragment (separate from the root `GCPS Theme Studio.html`, read via
+  `readLines()` in `app.R`) had its own, separate copy of the Performance
+  sub-controls markup and was still missing the gradient button/Stops
+  segmented control. Patched identically to the root HTML's controls.
+- `www/explorer.css` — `--gcps-<family>-<stop>` custom properties re-keyed to
+  the new 7 families (this file was already stale — missing `gold`/`plum`/
+  `slate`/`emerald` — before this change; not previously kept in sync
+  rigorously despite its "source of truth" header comment).
+
+### New palette capabilities (from the handoff, additive)
+- **Milestones gradient** — Warm-to-Cool (Burnt Sienna → Goldenrod → Forest
+  Green) ordered, unlabeled 3/5/7-stop ramp for binning performance data,
+  alongside the existing Semantic/Source-tinted performance variants.
+- **Race/Ethnicity** and **School Level** fixed-identity categorical
+  palettes (count stepper capped to their fixed length).
+- `LENS_BINARY` (ML/FRL/Gifted/SWD focus-vs-comparison pairs) present in data
+  but not yet surfaced in the UI (per the handoff).
+
+### Not done / out of scope this round
+- `palette-library/gcps-theme-studio.html` — the ~1MB pre-bundled single-file
+  artifact GitHub Pages actually deploys (see `.github/workflows/pages.yml`,
+  which uploads `palette-library/` as-is, no build step). It's a packaged
+  bundle (`<script type="__bundler/...">` payload), not hand-editable source,
+  and wasn't regenerated — the live Pages site will keep showing the old
+  palette until that bundle is rebuilt from the updated `src/`-equivalent
+  files above.
+- No refactor of `app.R` to `source()` `R/gcps_palette_data.R` /
+  `R/gcps_palette_library.R` instead of keeping its own inline
+  `gcps_base`/`gcps_ramps`/`gcps_diverging` — out of scope for this change.
+
+### Verification
+No R runtime available in this environment. Verified via:
+- A Node harness loading the handoff's actual `theme-studio.js`/
+  `palette-data.js` and calling its real functions (not reimplementing the
+  math) to compute `gcps_ramps`/`gcps_diverging` for the new 7 keys, and to
+  regenerate the 5-stop sequential formula, checked against the R module's
+  own `ACCEPTANCE` comment values for known inputs (`#007C91`, `#660000`) —
+  exact match.
+- `perfGradient(3)` verified against the handoff's stated expected output
+  (`#C0593C #D19C2F #297864`) — exact match.
+- Grep-swept the whole repo for the old key names (`blue|teal|green|violet|
+  orange|neutral|gold|plum|slate|emerald`) after the edits; every remaining
+  hit is either the new `slate` key, a generic English word ("neutral
+  center", surface-theme option, Tailwind tone name), or an untouched
+  historical changelog entry.
+- Separately grepped for direct property access (`GCPS_BASE.x` / `GCPS_BASE
+  [["x"]]` / `gcps_base[[x]]`) across every `.js`/`.R` file to catch dead
+  references the word-sweep would miss if the key were used as a bare
+  identifier — this is what caught the `fabricThemeFromState()` bug above.
+- `node --check` on every touched `.js` file; brace/paren/bracket counts on
+  every touched `.R` file compared to their pre-edit counts (no R runtime
+  available in this environment).

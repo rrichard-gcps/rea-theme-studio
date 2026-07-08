@@ -12,8 +12,8 @@ const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
 const state = {
   tab:"palette",
   // palette
-  mode:"bases", baseKey:"teal", cluster:"Brookwood", school:SCHOOL_ORDER[0],
-  type:"tints", catSet:"curated", perfN:4, perfV:"semantic",
+  mode:"bases", baseKey:"ocean", cluster:"Brookwood", school:SCHOOL_ORDER[0],
+  type:"tints", catSet:"curated", perfN:4, perfV:"semantic", perfStops:5,
   counts:{sequential:5,continuous:9,categorical:7,diverging:7},
   // typography
   font:"sourcesans", baseSize:15, ratio:"1.2", weight:600,
@@ -33,14 +33,14 @@ const state = {
 
 /* ---------- palette helpers ---------- */
 const TYPES=[["tints","Tints & Shades"],["sequential","Sequential"],["diverging","Diverging"],["categorical","Categorical"],["performance","Performance"],["continuous","Continuous"],["trend","Trend"]];
-const PURPOSE={sequential:"Single-hue ramp, light → dark. Ordered data, KPI emphasis, table heat.",tints:"11-step tint/shade scale (50–950) for fine UI theming and surface layering.",diverging:"Two-ended scale through a neutral center — above/below target, gap-to-goal, change.",categorical:"Distinct hues for unrelated groups. Three curated, source-independent sets.",performance:"Ordinal proficiency scale. Semantic = fixed good→needs-support; Source-tinted = monochrome intensity.",continuous:"Fine gradient for heatmaps and continuous fills (low → high).",trend:"Fixed semantic indicators — positive, negative, neutral."};
-const DIVERGE_PAIR_={maroon:"teal",teal:"maroon",blue:"orange",orange:"blue",green:"violet",violet:"green",neutral:"maroon",gold:"teal"};
+const PURPOSE={sequential:"Single-hue ramp, light → dark. Ordered data, KPI emphasis, table heat.",tints:"11-step tint/shade scale (50–950) for fine UI theming and surface layering.",diverging:"Two-ended scale through a neutral center — above/below target, gap-to-goal, change.",categorical:"Distinct hues for unrelated groups. Curated sets plus fixed-identity race & school palettes.",performance:"Milestones proficiency scale. Semantic = fixed level names; Source-tinted = monochrome intensity; Gradient = Warm-to-Cool ordered stops (3/5/7) for binning.",continuous:"Fine gradient for heatmaps and continuous fills (low → high).",trend:"Fixed semantic indicators — positive, negative, neutral."};
+const DIVERGE_PAIR_={maroon:"ocean",ocean:"sienna",forest:"amethyst",sienna:"ocean",amethyst:"forest",goldenrod:"ocean",slate:"maroon"};
 const COUNT={sequential:{min:3,max:9},continuous:{min:3,max:11},categorical:{min:3,max:10},diverging:{set:[5,7,9,11]}};
 
 function sourceColor(){if(state.mode==="bases")return GCPS_BASE[state.baseKey];if(state.mode==="clusters")return CLUSTERS[state.cluster];return CLUSTERS[SCHOOL_CLUSTER[state.school]];}
 function sourceName(){if(state.mode==="bases")return cap(state.baseKey);if(state.mode==="clusters")return state.cluster;return state.school+" · "+SCHOOL_CLUSTER[state.school];}
 function divergeOther(){if(state.mode==="bases")return GCPS_BASE[DIVERGE_PAIR_[state.baseKey]];const [L,C,H]=T.hexToOklch(sourceColor());return T.oklchToHex(L,C,(H+180)%360);}
-function catMax(){return state.catSet==="clusters"?CLUSTER_ORDER.length:COUNT.categorical.max;}
+function catMax(){if(state.catSet==="clusters")return CLUSTER_ORDER.length;const fx=T.catFixedMax(state.catSet);return fx!=null?fx:COUNT.categorical.max;}
 function currentPalette(){
   const hex=sourceColor();
   switch(state.type){
@@ -49,7 +49,7 @@ function currentPalette(){
     case"diverging":return T.diverging(hex,divergeOther(),state.counts.diverging);
     case"continuous":return T.continuous(hex,state.counts.continuous);
     case"trend":return T.trend();
-    case"performance":return state.perfV==="semantic"?T.perfSemantic(state.perfN):T.perfBase(hex,state.perfN);
+    case"performance":return state.perfV==="gradient"?T.perfGradient(state.perfStops):state.perfV==="semantic"?T.perfSemantic(state.perfN):T.perfBase(hex,state.perfN);
     case"categorical":return T.categorical(state.catSet,Math.min(state.counts.categorical,catMax()));
   }
 }
@@ -80,6 +80,7 @@ const isGrid=()=>["continuous","tints","categorical"].includes(state.type);
 function gridCols(){if(state.type==="tints")return 11;if(state.type==="continuous")return Math.min(state.counts.continuous,11);if(state.type==="categorical")return Math.min(Math.min(state.counts.categorical,catMax()),7);return 7;}
 function semLabel(item,i,len){
   if(item.sem!==undefined)return item.sem;
+  if(state.type==="performance"&&state.perfV==="gradient"){if(i===0)return"Low";if(i===len-1)return"High";return"";}
   if(["sequential","tints","continuous"].includes(state.type)){if(i===0)return"Lightest";if(i===len-1)return"Darkest";if(i===Math.floor(len/2))return"Mid";return"";}
   if(state.type==="diverging"){if(i===Math.floor(len/2))return"Center";return item.n<0?"Low pole":"High pole";}
   return"";
@@ -102,6 +103,14 @@ function renderPalette(){
   renderSource();
   $$("#typeSeg button").forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===state.type));
   $("#perfCtrls").classList.toggle('show',state.type==="performance");
+  $$("#perfVariant button").forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===state.perfV));
+  const isGradientPerf=state.perfV==="gradient";
+  $("#perfLevelsLbl").style.display=isGradientPerf?"none":"";
+  $("#perfLevels").style.display=isGradientPerf?"none":"";
+  $("#perfStopsLbl").style.display=isGradientPerf?"":"none";
+  $("#perfStops").style.display=isGradientPerf?"":"none";
+  if(isGradientPerf)$$("#perfStops button").forEach(b=>b.setAttribute('aria-pressed',+b.dataset.s===state.perfStops));
+  else $$("#perfLevels button").forEach(b=>b.setAttribute('aria-pressed',+b.dataset.n===state.perfN));
   $("#catCtrls").classList.toggle('show',state.type==="categorical");
   const hasCount=["sequential","continuous","categorical","diverging"].includes(state.type);
   $("#countCtrls").classList.toggle('show',hasCount);if(hasCount)renderCount();
@@ -591,8 +600,8 @@ function fabricThemeFromState(){
       muted:s.sunken, mutedForeground:s.text2,
       accent:T.accentTint(acc), accentForeground:T.accentHover(acc),
       border:s.border, ring:acc,
-      success:(GCPS_BASE.green||"#5E8C31").toUpperCase(),
-      warning:(GCPS_BASE.gold||"#C49A22").toUpperCase(),
+      success:(GCPS_BASE.forest||"#297864").toUpperCase(),
+      warning:(GCPS_BASE.goldenrod||"#D19C2F").toUpperCase(),
       danger:"#B42318"
     },
     radius:{ sm:"0.375rem", md:"0.625rem", lg:"0.875rem", xl:"1rem", full:"9999px" },
@@ -950,6 +959,7 @@ Object.entries(T.CAT_SETS).forEach(([k,v])=>{const b=document.createElement('but
 $("#semToggle").onchange=e=>document.querySelector('.ts-root').classList.toggle('semantic',e.target.checked);
 $$("#perfLevels button").forEach(b=>b.onclick=()=>{state.perfN=+b.dataset.n;render();});
 $$("#perfVariant button").forEach(b=>b.onclick=()=>{state.perfV=b.dataset.v;render();});
+$$("#perfStops button").forEach(b=>b.onclick=()=>{state.perfStops=+b.dataset.s;render();});
 $("#baseSize").oninput=e=>{state.baseSize=parseFloat(e.target.value);render();};
 $$("#weightSeg button").forEach(b=>b.onclick=()=>{state.weight=+b.dataset.w;render();});
 $$("#expSeg button").forEach(b=>b.onclick=()=>{state.exp=b.dataset.f;renderExport();});

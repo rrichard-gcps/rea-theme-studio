@@ -5,17 +5,20 @@
 # (the cluster CSV's #CCCCCC is a placeholder).
 # =============================================================================
 
-# 7 GCPS analytics bases (matches gcps_base in app.R) ------------------------
+# 7 GCPS analytics bases — Prompt design tokens (anchor + 6 primaries) ---------
 GCPS_BASE <- c(
-  maroon = "#660000", blue = "#2F5FB3", teal = "#007C91", green = "#5E8C31",
-  violet = "#6A4CC3", orange = "#D96A1D", neutral = "#7A828C"
+  maroon = "#660000", ocean = "#2D708E", forest = "#297864", sienna = "#C0593C",
+  amethyst = "#715981", goldenrod = "#D19C2F", slate = "#5B6D7A"
 )
 BASE_ORDER <- names(GCPS_BASE)
 
-# diverging partner per base (mirrors gcps_diverging pairings) ---------------
+# Prompt neutrals (surface anchors, not chart hues) --------------------------
+GCPS_NEUTRALS <- c(light = "#F4F4F6", dark = "#2A2A2E")
+
+# diverging partner per base (paired by opposite temperature) ----------------
 DIVERGE_PAIR <- c(
-  maroon = "teal", teal = "maroon", blue = "orange", orange = "blue",
-  green = "violet", violet = "green", neutral = "maroon"
+  maroon = "ocean", ocean = "sienna", forest = "amethyst", sienna = "ocean",
+  amethyst = "forest", goldenrod = "ocean", slate = "maroon"
 )
 
 # Curated GCPS qualitative palette (gcps_viz_palette_test from the Tableau lib)
@@ -23,6 +26,12 @@ GCPS_QUALITATIVE <- c(
   "#374E8E", "#4FBBAE", "#DF7C18", "#AC004F", "#1B87AA",
   "#E3B13E", "#CE4631", "#8D7A81", "#7E7E8F"
 )
+
+# Prompt fixed-identity qualitative categories (consistent order, capped length)
+CAT_RACE_COLORS <- c("#2D708E", "#C0593C", "#297864", "#D19C2F", "#715981", "#5B6D7A")
+CAT_RACE_NAMES  <- c("Asian", "Black", "Hispanic", "American Indian", "Multiracial", "White")
+CAT_SCHOOL_COLORS <- c("#4E95B8", "#489E88", "#D87A60", "#8D779C")
+CAT_SCHOOL_NAMES  <- c("Elementary", "Middle", "High", "Special School")
 
 # 21 cluster brand colors (cluster_colors_and_logos.csv + GCPS Clusters XML) --
 CLUSTERS <- c(

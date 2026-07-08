@@ -17,9 +17,12 @@ Palette types generated (deterministically, in OKLCH):
 - **Diverging** — two-ended through a neutral center
 - **Categorical** — distinct hues from the source via **color-theory harmonies**
   (Analogous, Complementary, Split-Comp, Triadic, Tetradic, Qualitative), plus
-  the curated **GCPS Curated** and **All Clusters** sets
+  the curated **GCPS Curated** and **All Clusters** sets, and fixed-identity
+  **Race/Ethnicity** and **School Level** palettes
 - **Performance** — ordinal proficiency scale, **4 / 5 / 6** levels, in a fixed
-  **Semantic** (good→needs-support) or **Source-tinted** monochrome variant
+  **Semantic** (good→needs-support) or **Source-tinted** monochrome variant, or
+  a **Milestones gradient** (Warm-to-Cool, **3 / 5 / 7** ordered stops, no
+  achievement names)
 - **Continuous** — fine 9-step gradient
 - **Trend** — fixed positive / negative / neutral indicators
 
